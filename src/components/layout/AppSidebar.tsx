@@ -39,7 +39,7 @@ const AppSidebar = () => {
           <div className="bg-white rounded-md p-1 w-8 h-8 flex items-center justify-center">
             <div className="text-subscription-purple font-bold text-xl">S</div>
           </div>
-          <span className="font-semibold text-lg text-white">SubscripSense</span>
+          <span className="font-semibold text-lg text-white">Wyatt's Subscriptions</span>
         </div>
         <SidebarTrigger className="absolute right-3 top-6" />
       </SidebarHeader>
