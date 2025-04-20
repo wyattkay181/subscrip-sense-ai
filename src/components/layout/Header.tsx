@@ -17,7 +17,7 @@ const Header = () => {
     <header className="border-b px-4 py-3 sm:px-6 md:px-8 lg:px-10 flex items-center justify-between bg-background/80 backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <SidebarTrigger className="lg:hidden" />
-        <h1 className="text-xl font-bold hidden sm:block">SubscripSense AI</h1>
+        <h1 className="text-xl font-bold hidden sm:block">Wyatt's Subscriptions</h1>
       </div>
       
       <div className="flex items-center gap-2">
@@ -47,3 +47,4 @@ const Header = () => {
 };
 
 export default Header;
+
