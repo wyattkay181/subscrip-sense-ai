@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { gmail } from "lucide-react";
+import { Mail } from "lucide-react";
 
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
@@ -21,7 +21,7 @@ const ConnectGmailDialog = () => {
         className="flex items-center gap-2"
         onClick={handleConnectGmail}
       >
-        <gmail size={18} />
+        <Mail size={18} />
         Connect Gmail
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
