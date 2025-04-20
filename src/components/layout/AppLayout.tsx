@@ -9,7 +9,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   const isMobile = useIsMobile();
 
   return (
-    <SidebarProvider defaultCollapsed={isMobile}>
+    <SidebarProvider defaultOpen={!isMobile}>
       <div className="min-h-screen flex w-full">
         <AppSidebar />
         <div className="flex-1 min-h-screen">

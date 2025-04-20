@@ -25,7 +25,11 @@ const UsageInsights = () => {
                 <span className="text-sm font-medium">{sub.name}</span>
                 <span className="text-sm text-muted-foreground">{sub.usage}%</span>
               </div>
-              <Progress value={sub.usage} className="h-2" indicatorClassName={`bg-[${sub.color}]`} />
+              <Progress 
+                value={sub.usage} 
+                className="h-2" 
+                style={{ '--progress-color': sub.color } as React.CSSProperties}
+              />
             </div>
           ))}
         </div>
