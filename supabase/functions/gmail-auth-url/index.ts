@@ -25,12 +25,14 @@ serve(async (req) => {
     url.searchParams.append('client_id', clientId)
     url.searchParams.append('redirect_uri', redirectUri)
     url.searchParams.append('response_type', 'code')
-    url.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly')
+    
+    // Updated scopes for comprehensive access
+    url.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile')
+    
     url.searchParams.append('access_type', 'offline')
     url.searchParams.append('prompt', 'consent')
     
-    // Add test users parameter to allow testing without verification
-    // This will only show the app to users specified in the Google Cloud Console
+    // Allow testing without full verification
     url.searchParams.append('include_granted_scopes', 'true')
 
     return new Response(
