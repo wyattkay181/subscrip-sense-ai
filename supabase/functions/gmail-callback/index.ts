@@ -25,6 +25,12 @@ serve(async (req) => {
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
 
+    if (!clientId || !clientSecret || !redirectUri) {
+      throw new Error('Missing required environment variables')
+    }
+
+    console.log('Exchanging code for tokens')
+    
     // Exchange the authorization code for tokens
     const response = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
@@ -33,9 +39,9 @@ serve(async (req) => {
       },
       body: new URLSearchParams({
         code,
-        client_id: clientId!,
-        client_secret: clientSecret!,
-        redirect_uri: redirectUri!,
+        client_id: clientId,
+        client_secret: clientSecret,
+        redirect_uri: redirectUri,
         grant_type: 'authorization_code',
       }),
     })
@@ -43,8 +49,11 @@ serve(async (req) => {
     const data = await response.json()
     
     if (!response.ok) {
+      console.error('Token exchange failed:', data)
       throw new Error(`Failed to exchange code: ${data.error}`)
     }
+
+    console.log('Successfully obtained tokens')
 
     // Store tokens in Supabase
     const supabase = createClient(
@@ -66,8 +75,11 @@ serve(async (req) => {
     })
 
     if (error) {
+      console.error('Error storing tokens:', error)
       throw new Error(`Failed to store tokens: ${error.message}`)
     }
+
+    console.log('Successfully stored tokens in database')
 
     // Redirect back to the frontend with success message
     return new Response(
@@ -82,7 +94,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in Gmail callback:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

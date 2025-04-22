@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
@@ -35,12 +36,22 @@ const ConnectGmailDialog = () => {
     try {
       setIsLoading(true);
       
+      console.log('Invoking gmail-auth-url function');
+      
       // Call the Supabase Edge Function to get the authorization URL
       const { data, error } = await supabase.functions.invoke('gmail-auth-url');
       
-      if (error || !data?.url) {
+      if (error) {
+        console.error('Error invoking function:', error);
+        throw error;
+      }
+      
+      if (!data?.url) {
+        console.error('No URL returned from function:', data);
         throw new Error('Failed to get authorization URL');
       }
+      
+      console.log('Redirecting to Google auth URL:', data.url);
       
       // Redirect to Google's OAuth consent screen
       window.location.href = data.url;
