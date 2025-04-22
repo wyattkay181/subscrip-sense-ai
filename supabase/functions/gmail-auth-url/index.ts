@@ -28,6 +28,10 @@ serve(async (req) => {
     url.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly')
     url.searchParams.append('access_type', 'offline')
     url.searchParams.append('prompt', 'consent')
+    
+    // Add test users parameter to allow testing without verification
+    // This will only show the app to users specified in the Google Cloud Console
+    url.searchParams.append('include_granted_scopes', 'true')
 
     return new Response(
       JSON.stringify({ url: url.toString() }),
