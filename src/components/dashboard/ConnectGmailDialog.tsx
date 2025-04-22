@@ -1,14 +1,29 @@
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLocation, useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Check for successful Gmail connection
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get('gmail-connected') === 'true') {
+      toast({
+        title: "Success!",
+        description: "Gmail successfully connected.",
+      });
+      navigate('/'); // Remove the query parameter
+    }
+  }, [location, navigate, toast]);
 
   // Handler for connecting Gmail
   const handleConnectGmail = () => {
@@ -20,17 +35,15 @@ const ConnectGmailDialog = () => {
     try {
       setIsLoading(true);
       
-      // Call your Supabase Edge Function to get the authorization URL
-      const response = await fetch('/api/gmail/auth-url');
+      // Call the Supabase Edge Function to get the authorization URL
+      const { data, error } = await supabase.functions.invoke('gmail-auth-url');
       
-      if (!response.ok) {
+      if (error || !data?.url) {
         throw new Error('Failed to get authorization URL');
       }
       
-      const { url } = await response.json();
-      
       // Redirect to Google's OAuth consent screen
-      window.location.href = url;
+      window.location.href = data.url;
     } catch (error) {
       console.error('OAuth initiation error:', error);
       toast({
