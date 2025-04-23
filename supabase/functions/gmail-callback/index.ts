@@ -15,19 +15,40 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url)
+    console.log('Callback URL received:', url.toString())
+    console.log('Search params:', Object.fromEntries(url.searchParams.entries()))
+    
     const code = url.searchParams.get('code')
+    const error = url.searchParams.get('error')
+    
+    // Handle error from Google OAuth flow
+    if (error) {
+      console.error('Google OAuth returned an error:', error)
+      return new Response(
+        JSON.stringify({ error: `Google OAuth error: ${error}` }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
     
     if (!code) {
-      console.error('No authorization code provided')
-      throw new Error('No code provided')
+      console.error('No authorization code provided in URL params')
+      return new Response(
+        JSON.stringify({ error: 'No authorization code provided in the callback URL' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
     }
 
+    // Check for required environment variables
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
 
     if (!clientId || !clientSecret || !redirectUri) {
-      console.error('Missing required environment variables')
+      console.error('Missing required environment variables', {
+        hasClientId: !!clientId,
+        hasClientSecret: !!clientSecret,
+        hasRedirectUri: !!redirectUri
+      })
       throw new Error('Missing required environment variables')
     }
 
@@ -64,12 +85,14 @@ serve(async (req) => {
     )
 
     // Create a table to store tokens if it doesn't exist
+    console.log('Creating gmail_tokens table if it does not exist')
     const { error: sqlError } = await supabase.rpc('create_gmail_tokens_table')
     if (sqlError) {
       console.error('Error creating table:', sqlError)
     }
 
     // Store the tokens
+    console.log('Storing tokens in database')
     const { error } = await supabase.from('gmail_tokens').insert({
       access_token: data.access_token,
       refresh_token: data.refresh_token,

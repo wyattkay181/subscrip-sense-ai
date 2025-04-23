@@ -10,13 +10,15 @@ import { supabase } from "@/integrations/supabase/client";
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check for successful Gmail connection
+  // Check for successful Gmail connection or errors
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
+    
     if (searchParams.get('gmail-connected') === 'true') {
       toast({
         title: "Success!",
@@ -24,17 +26,30 @@ const ConnectGmailDialog = () => {
       });
       navigate('/'); // Remove the query parameter
     }
+    
+    // Check for error in URL params (could be added to the callback URL)
+    const errorParam = searchParams.get('error');
+    if (errorParam) {
+      toast({
+        title: "Connection Error",
+        description: `Gmail connection failed: ${errorParam}`,
+        variant: "destructive",
+      });
+      navigate('/');
+    }
   }, [location, navigate, toast]);
 
   // Handler for connecting Gmail
   const handleConnectGmail = () => {
     setOpen(true);
+    setError(null);
   };
 
   // Initiate the OAuth flow
   const initiateOAuthFlow = async () => {
     try {
       setIsLoading(true);
+      setError(null);
       
       console.log('Invoking gmail-auth-url function');
       
@@ -43,11 +58,15 @@ const ConnectGmailDialog = () => {
       
       if (error) {
         console.error('Error invoking function:', error);
+        setError(`Failed to start authentication: ${error.message}`);
+        setIsLoading(false);
         throw error;
       }
       
       if (!data?.url) {
         console.error('No URL returned from function:', data);
+        setError('Failed to get authorization URL from server');
+        setIsLoading(false);
         throw new Error('Failed to get authorization URL');
       }
       
@@ -90,6 +109,13 @@ const ConnectGmailDialog = () => {
               </span>
             </DialogDescription>
           </DialogHeader>
+          
+          {error && (
+            <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">
+              Error: {error}
+            </div>
+          )}
+          
           <DialogFooter>
             <Button 
               variant="default"
