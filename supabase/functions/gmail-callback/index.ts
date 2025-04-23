@@ -18,6 +18,7 @@ serve(async (req) => {
     const code = url.searchParams.get('code')
     
     if (!code) {
+      console.error('No authorization code provided')
       throw new Error('No code provided')
     }
 
@@ -26,6 +27,7 @@ serve(async (req) => {
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
 
     if (!clientId || !clientSecret || !redirectUri) {
+      console.error('Missing required environment variables')
       throw new Error('Missing required environment variables')
     }
 
