@@ -20,6 +20,8 @@ serve(async (req) => {
       throw new Error('Missing required environment variables')
     }
 
+    console.log('Generating Google OAuth URL with client ID and redirect URI')
+
     // Generate the Google OAuth URL
     const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')
     url.searchParams.append('client_id', clientId)
@@ -35,11 +37,14 @@ serve(async (req) => {
     // Allow testing without full verification
     url.searchParams.append('include_granted_scopes', 'true')
 
+    console.log('Generated OAuth URL:', url.toString())
+
     return new Response(
       JSON.stringify({ url: url.toString() }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
+    console.error('Error in gmail-auth-url function:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
