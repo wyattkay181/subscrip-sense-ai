@@ -1,11 +1,22 @@
 
 project_id = "nggmgtwwosrtwbmjpezi"
 
-[functions.gmail-callback]
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+
+[studio]
+enabled = true
+port = 54323
+
+[[functions]]
+name = "gmail-callback"
 verify_jwt = false
 
-[functions.create-gmail-table]
-verify_jwt = false
-
-[functions.gmail-auth-url]
-verify_jwt = false
+[[functions]]
+name = "scan-subscriptions"
+verify_jwt = true

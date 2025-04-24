@@ -2,16 +2,23 @@
 import React from "react";
 import { DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { LogIn } from "lucide-react";
+import { LogIn, Loader2 } from "lucide-react";
 
 interface GmailDialogContentProps {
   error: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  isScanning: boolean;
   onConnect: () => void;
 }
 
-const GmailDialogContent = ({ error, isLoading, isAuthenticated, onConnect }: GmailDialogContentProps) => {
+const GmailDialogContent = ({ 
+  error, 
+  isLoading, 
+  isAuthenticated, 
+  onConnect,
+  isScanning 
+}: GmailDialogContentProps) => {
   return (
     <DialogContent>
       <DialogHeader>
@@ -21,9 +28,16 @@ const GmailDialogContent = ({ error, isLoading, isAuthenticated, onConnect }: Gm
           <br /><br />
           We'll only read emails related to subscriptions and never store your full emails.
           <br /><br />
-          <span className="inline-block mt-2 font-medium text-muted-foreground">
-            You will be redirected to Google's secure login page.
-          </span>
+          {isScanning ? (
+            <span className="inline-flex items-center gap-2 text-sm font-medium text-primary">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Scanning your inbox for subscriptions...
+            </span>
+          ) : (
+            <span className="inline-block mt-2 font-medium text-muted-foreground">
+              You will be redirected to Google's secure login page.
+            </span>
+          )}
         </DialogDescription>
       </DialogHeader>
       
@@ -51,9 +65,9 @@ const GmailDialogContent = ({ error, isLoading, isAuthenticated, onConnect }: Gm
           variant="default"
           className="w-full"
           onClick={onConnect}
-          disabled={isLoading || !isAuthenticated}
+          disabled={isLoading || !isAuthenticated || isScanning}
         >
-          {isLoading ? "Connecting..." : "Continue with Gmail"}
+          {isLoading ? "Connecting..." : isScanning ? "Scanning..." : "Continue with Gmail"}
         </Button>
       </DialogFooter>
     </DialogContent>

@@ -5,8 +5,9 @@ export const corsHeaders = {
 }
 
 export const getRedirectBaseUrl = (requestUrl: string) => {
-  const baseUrl = new URL(requestUrl).origin.replace('nggmgtwwosrtwbmjpezi.supabase.co', 'lovableproject.com');
-  return baseUrl;
+  // Remove the function path from the URL to get the base URL
+  const url = new URL(requestUrl);
+  return url.origin.replace('.supabase.co/functions/v1/gmail-callback', '.lovableproject.com');
 };
 
 export const createRedirectResponse = (redirectBaseUrl: string, params: Record<string, string>) => {
