@@ -20,7 +20,7 @@ serve(async (req) => {
   console.log('Request headers:', Object.fromEntries(req.headers.entries()))
   
   try {
-    // Instead of using the client's API key, use the service role key from environment
+    // Get Supabase environment variables
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
@@ -37,17 +37,56 @@ serve(async (req) => {
       supabaseServiceKey
     );
 
-    console.log('Attempting to create gmail_tokens table via database function')
+    console.log('Attempting to create gmail_tokens table via SQL directly')
     
-    // Create the table using the database function
-    const { data, error } = await supabase.rpc('create_gmail_tokens_table');
+    // Execute SQL directly instead of using a database function
+    const { data, error } = await supabase.from('_exec_sql').select('*').execute(`
+      CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        access_token TEXT NOT NULL,
+        refresh_token TEXT,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+      );
+      
+      -- Set up RLS
+      ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+      
+      -- Allow read access to authenticated users
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies WHERE tablename = 'gmail_tokens' AND policyname = 'Allow read access for authenticated users'
+        ) THEN
+          CREATE POLICY "Allow read access for authenticated users" 
+            ON public.gmail_tokens 
+            FOR SELECT 
+            TO authenticated 
+            USING (true);
+        END IF;
+      END
+      $$;
+      
+      -- Allow service role to insert, update, delete
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_policies WHERE tablename = 'gmail_tokens' AND policyname = 'Allow service role full access'
+        ) THEN
+          CREATE POLICY "Allow service role full access" 
+            ON public.gmail_tokens
+            USING (auth.jwt() IS NOT NULL);
+        END IF;
+      END
+      $$;
+    `);
     
     if (error) {
-      console.error('Error creating table:', error);
+      console.error('Error directly creating table with SQL:', error);
       throw error;
     }
 
-    console.log('Table created or validated successfully');
+    console.log('Table created or validated successfully via direct SQL');
 
     return new Response(
       JSON.stringify({ message: 'Table created successfully' }),

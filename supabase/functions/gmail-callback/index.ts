@@ -101,11 +101,22 @@ serve(async (req) => {
       supabaseServiceKey
     )
 
-    // Create a table to store tokens if it doesn't exist
-    console.log('Creating gmail_tokens table if it does not exist')
-    const { error: sqlError } = await supabase.rpc('create_gmail_tokens_table')
+    // Create the table directly if it doesn't exist
+    console.log('Ensuring gmail_tokens table exists')
+    const { error: sqlError } = await supabase.from('_exec_sql').select('*').execute(`
+      CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        access_token TEXT NOT NULL,
+        refresh_token TEXT,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+      );
+      
+      ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+    `)
+    
     if (sqlError) {
-      console.error('Error creating table:', sqlError)
+      console.error('Error creating table directly:', sqlError)
     }
 
     // Store the tokens

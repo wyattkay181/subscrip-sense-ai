@@ -59,19 +59,19 @@ const ConnectGmailDialog = () => {
         }
       });
       
-      const responseData = await tableResponse.json();
-      
       if (!tableResponse.ok) {
-        console.error('Table creation failed:', responseData);
-        setError(`Failed to create table: ${responseData.error || 'Unknown error'}`);
-      } else {
-        console.log('Table creation successful:', responseData);
+        const errorData = await tableResponse.json();
+        console.error('Table creation failed:', errorData);
+        setError(`Failed to prepare for Gmail connection: ${errorData.error || 'Unknown error'}`);
+        return false;
       }
       
-      return tableResponse.ok;
+      const responseData = await tableResponse.json();
+      console.log('Table creation response:', responseData);
+      return true;
     } catch (error) {
       console.error('Error creating Gmail table:', error);
-      setError(`Error creating Gmail table: ${error instanceof Error ? error.message : String(error)}`);
+      setError(`Error preparing for Gmail connection: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   };
@@ -86,9 +86,12 @@ const ConnectGmailDialog = () => {
       
       // First create the table to ensure it exists
       const tableCreated = await createGmailTable();
-      console.log('Table creation result:', tableCreated);
+      if (!tableCreated) {
+        setIsLoading(false);
+        return;
+      }
       
-      // Important: Direct URL approach to avoid API key issues
+      // Direct URL approach with proper headers
       const authUrl = new URL(`https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url`);
       
       const response = await fetch(authUrl, {
