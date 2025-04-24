@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail, LogIn } from "lucide-react";
@@ -18,7 +18,7 @@ const ConnectGmailDialog = () => {
   const navigate = useNavigate();
 
   // Check for successful Gmail connection or errors
-  React.useEffect(() => {
+  useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     
     if (searchParams.get('gmail-connected') === 'true') {
@@ -69,13 +69,39 @@ const ConnectGmailDialog = () => {
       setError(null);
       
       console.log('Starting OAuth flow with user ID:', user.id);
-      console.log('Current origin:', window.location.origin);
-      console.log('SUPABASE_PUBLISHABLE_KEY available:', !!SUPABASE_PUBLISHABLE_KEY);
       
+      // First, ensure the table exists
+      console.log('Ensuring gmail_tokens table exists');
+      try {
+        const createTableResponse = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/create-gmail-table', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': SUPABASE_PUBLISHABLE_KEY
+          },
+          body: JSON.stringify({ user_id: user.id })
+        });
+        
+        console.log('Create table response status:', createTableResponse.status);
+        const createTableData = await createTableResponse.json();
+        console.log('Create table response:', createTableData);
+        
+        if (!createTableResponse.ok) {
+          console.error('Error creating table:', createTableData);
+          setError(`Table creation failed: ${createTableData.error || 'Unknown error'}`);
+          setIsLoading(false);
+          return;
+        }
+      } catch (tableError) {
+        console.error('Error creating table:', tableError);
+        // Continue anyway - the callback will try to create the table as well
+      }
+      
+      // Now initiate the OAuth flow
+      console.log('Calling gmail-auth-url function');
       const functionUrl = 'https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url';
-      console.log('Calling function URL:', functionUrl);
       
-      // Use the publishable key from the client file
       const response = await fetch(functionUrl, {
         method: 'GET',
         headers: {
