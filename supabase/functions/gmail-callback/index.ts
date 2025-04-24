@@ -159,113 +159,153 @@ serve(async (req) => {
       supabaseServiceKey
     )
 
-    // Ensure the table exists (call the create-gmail-table function first)
-    console.log('Ensuring gmail_tokens table exists')
+    // First check if the table exists
+    console.log('Checking if gmail_tokens table exists')
     try {
-      // Try to query the table first to see if it exists
-      const { error: tableCheckError } = await supabase
+      const { data: tableCheck, error: tableCheckError } = await supabase
         .from('gmail_tokens')
         .select('id')
         .limit(1)
-
+      
       if (tableCheckError) {
-        console.log('Table might not exist, creating it')
-        // Use direct SQL to create the table if it doesn't exist
-        const createTableSQL = `
-          CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL,
-            access_token TEXT NOT NULL,
-            refresh_token TEXT,
-            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-          );
-          
-          -- Add RLS policy if it doesn't exist
-          DO $$
-          BEGIN
-            IF NOT EXISTS (
-              SELECT 1 FROM pg_policies 
-              WHERE tablename = 'gmail_tokens' 
-              AND policyname = 'Users can view their own tokens'
-            ) THEN
-              ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
-              
-              CREATE POLICY "Users can view their own tokens"
-                ON public.gmail_tokens
-                FOR SELECT
-                USING (auth.uid() = user_id);
-                
-              CREATE POLICY "Users can insert their own tokens"
-                ON public.gmail_tokens
-                FOR INSERT
-                WITH CHECK (auth.uid() = user_id);
-                
-              CREATE POLICY "Users can update their own tokens"
-                ON public.gmail_tokens
-                FOR UPDATE
-                USING (auth.uid() = user_id);
-                
-              CREATE POLICY "Users can delete their own tokens"
-                ON public.gmail_tokens
-                FOR DELETE
-                USING (auth.uid() = user_id);
-            END IF;
-          EXCEPTION
-            WHEN OTHERS THEN
-              RAISE NOTICE 'Error creating policies: %', SQLERRM;
-          END
-          $$;
-        `;
+        console.log('Table check error. Attempting to create table:', tableCheckError)
         
-        // Execute the SQL using service role permissions
-        await supabase.rpc('exec_sql', { sql: createTableSQL });
+        try {
+          // Create the table using direct SQL
+          const createTableSQL = `
+            CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+              id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              user_id UUID NOT NULL,
+              access_token TEXT NOT NULL,
+              refresh_token TEXT,
+              expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+              created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+            );
+
+            -- Enable RLS
+            ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+
+            -- Create policies
+            DO $$
+            BEGIN
+              IF NOT EXISTS (
+                SELECT 1 FROM pg_policies 
+                WHERE tablename = 'gmail_tokens' 
+                AND policyname = 'Users can view their own tokens'
+              ) THEN
+                CREATE POLICY "Users can view their own tokens"
+                  ON public.gmail_tokens
+                  FOR SELECT
+                  USING (auth.uid() = user_id);
+                  
+                CREATE POLICY "Users can insert their own tokens"
+                  ON public.gmail_tokens
+                  FOR INSERT
+                  WITH CHECK (auth.uid() = user_id);
+                  
+                CREATE POLICY "Users can update their own tokens"
+                  ON public.gmail_tokens
+                  FOR UPDATE
+                  USING (auth.uid() = user_id);
+                  
+                CREATE POLICY "Users can delete their own tokens"
+                  ON public.gmail_tokens
+                  FOR DELETE
+                  USING (auth.uid() = user_id);
+              END IF;
+            END
+            $$;
+          `;
+          
+          console.log('Executing SQL to create table if it does not exist')
+          const { error: sqlError } = await supabase.rpc('exec_sql', { sql: createTableSQL })
+          
+          if (sqlError) {
+            console.error('Failed to create table with SQL:', sqlError)
+          } else {
+            console.log('Successfully created table (or it already existed)')
+          }
+        } catch (createTableError) {
+          console.error('Error during table creation:', createTableError)
+          // Continue anyway since we're using service role
+        }
+      } else {
+        console.log('Table exists, continuing with token storage')
       }
-    } catch (tableError) {
-      console.error('Error during table creation/check:', tableError);
-      // Continue anyway since we're using service role key
+    } catch (tableExistsError) {
+      console.error('Error checking if table exists:', tableExistsError)
+      // Continue anyway with service role
     }
 
-    // Try to delete any existing tokens for this user
-    console.log('Removing any existing tokens for user')
+    // Delete any existing tokens for this user
+    console.log('Removing any existing tokens for user:', userIdParam)
     try {
-      await supabase
+      const { error: deleteError } = await supabase
         .from('gmail_tokens')
         .delete()
         .eq('user_id', userIdParam)
+      
+      if (deleteError) {
+        console.error('Error deleting existing tokens:', deleteError)
+      } else {
+        console.log('Successfully deleted any existing tokens')
+      }
     } catch (deleteError) {
-      console.error('Error deleting existing tokens:', deleteError)
-      // Continue anyway
+      console.error('Exception during token deletion:', deleteError)
     }
 
     // Store the tokens
-    console.log('Storing new tokens in database')
-    const { error: insertError } = await supabase
-      .from('gmail_tokens')
-      .insert({
+    console.log('Storing new tokens in database for user:', userIdParam)
+    try {
+      const tokenData = {
         user_id: userIdParam,
         access_token: data.access_token,
-        refresh_token: data.refresh_token,
+        refresh_token: data.refresh_token || null,
         expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+      }
+      
+      console.log('Token data being stored:', {
+        user_id: tokenData.user_id,
+        access_token: '***redacted***',
+        refresh_token: tokenData.refresh_token ? '***redacted***' : null,
+        expires_at: tokenData.expires_at
       })
+      
+      const { error: insertError } = await supabase
+        .from('gmail_tokens')
+        .insert(tokenData)
 
-    if (insertError) {
-      console.error('Error storing tokens:', insertError)
+      if (insertError) {
+        console.error('Error storing tokens:', insertError)
+        return new Response(
+          null,
+          { 
+            headers: { 
+              ...corsHeaders,
+              'Location': `/?error=${encodeURIComponent('Failed to store tokens: ' + JSON.stringify(insertError))}`
+            },
+            status: 302 
+          }
+        )
+      }
+
+      console.log('Successfully stored tokens in database')
+    } catch (insertError) {
+      console.error('Exception during token insertion:', insertError)
       return new Response(
         null,
         { 
           headers: { 
             ...corsHeaders,
-            'Location': '/?error=token_storage_failed'
+            'Location': `/?error=${encodeURIComponent('Exception storing tokens: ' + insertError.message)}`
           },
           status: 302 
         }
       )
     }
 
-    console.log('Successfully stored tokens in database')
-
     // Redirect back to the frontend with success message
+    console.log('Redirecting back to frontend with success')
     return new Response(
       null,
       {
