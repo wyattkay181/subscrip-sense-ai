@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Mail, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 import { useAuth } from "@/providers/AuthProvider";
 
 const ConnectGmailDialog = () => {
@@ -67,13 +67,13 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
-      // Explicitly use the anon key for this request
+      // Use the publishable key from the client file
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
+          'apikey': SUPABASE_PUBLISHABLE_KEY
         }
       });
       
