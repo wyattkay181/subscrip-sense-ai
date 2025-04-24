@@ -5,10 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-
-// Import SUPABASE_PUBLISHABLE_KEY from client for consistent use across the app
-import { SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
+import { supabase, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
 
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
@@ -57,8 +54,8 @@ const ConnectGmailDialog = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          'apikey': SUPABASE_PUBLISHABLE_KEY
         }
       });
       
@@ -91,8 +88,8 @@ const ConnectGmailDialog = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24`,
-          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
+          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+          'apikey': SUPABASE_PUBLISHABLE_KEY
         }
       });
       
