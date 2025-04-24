@@ -18,6 +18,7 @@ serve(async (req) => {
   // Log full request details for debugging
   console.log('Gmail Callback function called')
   console.log('Request headers:', Object.fromEntries(req.headers.entries()))
+  console.log('Request URL:', req.url)
 
   try {
     const url = new URL(req.url)
@@ -59,6 +60,7 @@ serve(async (req) => {
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
     const supabaseUrl = Deno.env.get('SUPABASE_URL')
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
 
     console.log('Environment variable check:')
     console.log('- GOOGLE_CLIENT_ID present:', !!clientId)
@@ -66,6 +68,7 @@ serve(async (req) => {
     console.log('- GOOGLE_REDIRECT_URI value:', redirectUri)
     console.log('- SUPABASE_URL present:', !!supabaseUrl)
     console.log('- SUPABASE_SERVICE_ROLE_KEY present:', !!supabaseServiceKey)
+    console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey)
 
     if (!clientId || !clientSecret || !redirectUri || !supabaseUrl || !supabaseServiceKey) {
       console.error('Missing required environment variables', {
@@ -81,7 +84,7 @@ serve(async (req) => {
     console.log('Exchanging code for tokens')
     
     // Exchange the authorization code for tokens
-    const response = await fetch('https://oauth2.googleapis.com/token', {
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
@@ -95,9 +98,9 @@ serve(async (req) => {
       }),
     })
 
-    const data = await response.json()
+    const data = await tokenResponse.json()
     
-    if (!response.ok) {
+    if (!tokenResponse.ok) {
       console.error('Token exchange failed:', data)
       throw new Error(`Failed to exchange code: ${data.error}`)
     }
