@@ -45,7 +45,7 @@ const ConnectGmailDialog = () => {
 
   const createGmailTable = async () => {
     try {
-      const { data, error } = await supabase.rpc('create_gmail_tokens_table');
+      const { error } = await supabase.rpc('create_gmail_tokens_table');
       
       if (error) {
         console.error('Table creation error:', error);
@@ -72,9 +72,8 @@ const ConnectGmailDialog = () => {
         return;
       }
       
-      const { data, error } = await supabase
-        .from('gmail_tokens')
-        .select();
+      // Removed unnecessary query that was causing issues
+      // We don't need to query the table - just ensure it exists
       
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
@@ -92,16 +91,17 @@ const ConnectGmailDialog = () => {
         return;
       }
       
-      const data = await response.json();
+      // Rename to responseData to avoid duplicate variable name
+      const responseData = await response.json();
       
-      if (!data?.url) {
-        console.error('No URL returned:', data);
+      if (!responseData?.url) {
+        console.error('No URL returned:', responseData);
         setError('Failed to get authorization URL from server');
         setIsLoading(false);
         return;
       }
       
-      window.location.href = data.url;
+      window.location.href = responseData.url;
     } catch (error) {
       console.error('OAuth initiation error:', error);
       toast({
