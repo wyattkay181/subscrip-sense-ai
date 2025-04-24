@@ -8,51 +8,80 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
+console.log('Gmail Callback function loaded and running')
+
 serve(async (req) => {
-  // Handle CORS preflight requests
-  if (req.method === 'OPTIONS') {
-    console.log('Handling OPTIONS request with CORS headers')
-    return new Response(null, { headers: corsHeaders })
-  }
-
-  // Log full request details for debugging
-  console.log('Gmail Callback function called')
-  console.log('Request headers:', Object.fromEntries(req.headers.entries()))
-  console.log('Request URL:', req.url)
-
+  // Start with initial logging to confirm the function is called
+  console.log('Gmail Callback function invoked')
+  
   try {
+    // Handle CORS preflight requests first
+    if (req.method === 'OPTIONS') {
+      console.log('Handling OPTIONS request with CORS headers')
+      return new Response(null, { headers: corsHeaders })
+    }
+
+    // Log all request information for debugging
+    console.log('Request URL:', req.url)
+    console.log('Request method:', req.method)
+    console.log('Request headers:', Object.fromEntries(req.headers.entries()))
+    
     const url = new URL(req.url)
-    console.log('Callback URL received:', url.toString())
+    console.log('Full URL received:', url.toString())
     console.log('Search params:', Object.fromEntries(url.searchParams.entries()))
     
-    const code = url.searchParams.get('code')
+    // Check for error parameter first - Google OAuth might return an error
     const error = url.searchParams.get('error')
-    const userIdParam = url.searchParams.get('state') // Google OAuth returns user_id as state parameter
-    
-    // Handle error from Google OAuth flow
     if (error) {
       console.error('Google OAuth returned an error:', error)
+      // Redirect to frontend with error message
       return new Response(
-        JSON.stringify({ error: `Google OAuth error: ${error}` }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        null,
+        {
+          headers: {
+            ...corsHeaders,
+            'Location': `/?error=${encodeURIComponent(error)}`
+          },
+          status: 302
+        }
       )
     }
     
+    // Extract important parameters
+    const code = url.searchParams.get('code')
+    const userIdParam = url.searchParams.get('state') // Google returns user_id as state parameter
+    
+    // Validate required parameters
     if (!code) {
       console.error('No authorization code provided in URL params')
       return new Response(
-        JSON.stringify({ error: 'No authorization code provided in the callback URL' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        null,
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Location': '/?error=missing_code'
+          },
+          status: 302 
+        }
       )
     }
 
     if (!userIdParam) {
       console.error('No user_id provided in URL params')
       return new Response(
-        JSON.stringify({ error: 'No user_id provided in the callback URL' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+        null,
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Location': '/?error=missing_user_id'
+          },
+          status: 302 
+        }
       )
     }
+
+    console.log('User ID from state param:', userIdParam)
+    console.log('Auth code received, proceeding to exchange for tokens')
 
     // Check for required environment variables
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
@@ -62,7 +91,8 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')
 
-    console.log('Environment variable check:')
+    // Log environment variable presence for debugging
+    console.log('Environment variables check:')
     console.log('- GOOGLE_CLIENT_ID present:', !!clientId)
     console.log('- GOOGLE_CLIENT_SECRET present:', !!clientSecret) 
     console.log('- GOOGLE_REDIRECT_URI value:', redirectUri)
@@ -71,14 +101,17 @@ serve(async (req) => {
     console.log('- SUPABASE_ANON_KEY present:', !!supabaseAnonKey)
 
     if (!clientId || !clientSecret || !redirectUri || !supabaseUrl || !supabaseServiceKey) {
-      console.error('Missing required environment variables', {
-        hasClientId: !!clientId,
-        hasClientSecret: !!clientSecret,
-        hasRedirectUri: !!redirectUri,
-        hasSupabaseUrl: !!supabaseUrl,
-        hasSupabaseServiceKey: !!supabaseServiceKey
-      })
-      throw new Error('Missing required environment variables')
+      console.error('Missing required environment variables')
+      return new Response(
+        null,
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Location': '/?error=missing_environment_variables'
+          },
+          status: 302 
+        }
+      )
     }
 
     console.log('Exchanging code for tokens')
@@ -98,97 +131,136 @@ serve(async (req) => {
       }),
     })
 
+    // Log the token response status
+    console.log('Token exchange response status:', tokenResponse.status)
+    
     const data = await tokenResponse.json()
     
     if (!tokenResponse.ok) {
       console.error('Token exchange failed:', data)
-      throw new Error(`Failed to exchange code: ${data.error}`)
+      return new Response(
+        null,
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Location': `/?error=${encodeURIComponent(data.error || 'token_exchange_failed')}`
+          },
+          status: 302 
+        }
+      )
     }
 
     console.log('Successfully obtained tokens')
 
-    // Store tokens in Supabase using service role key
+    // Create Supabase client with service role key
+    console.log('Creating Supabase client')
     const supabase = createClient(
       supabaseUrl,
       supabaseServiceKey
     )
 
-    console.log('Creating table if it does not exist');
-    
-    // Create the table directly with SQL using service role
+    // Ensure the table exists (call the create-gmail-table function first)
+    console.log('Ensuring gmail_tokens table exists')
     try {
-      // Use direct SQL to create the table if it doesn't exist
-      const createTableSQL = `
-        CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL,
-          access_token TEXT NOT NULL,
-          refresh_token TEXT,
-          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-        );
+      // Try to query the table first to see if it exists
+      const { error: tableCheckError } = await supabase
+        .from('gmail_tokens')
+        .select('id')
+        .limit(1)
+
+      if (tableCheckError) {
+        console.log('Table might not exist, creating it')
+        // Use direct SQL to create the table if it doesn't exist
+        const createTableSQL = `
+          CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+          );
+          
+          -- Add RLS policy if it doesn't exist
+          DO $$
+          BEGIN
+            IF NOT EXISTS (
+              SELECT 1 FROM pg_policies 
+              WHERE tablename = 'gmail_tokens' 
+              AND policyname = 'Users can view their own tokens'
+            ) THEN
+              ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+              
+              CREATE POLICY "Users can view their own tokens"
+                ON public.gmail_tokens
+                FOR SELECT
+                USING (auth.uid() = user_id);
+                
+              CREATE POLICY "Users can insert their own tokens"
+                ON public.gmail_tokens
+                FOR INSERT
+                WITH CHECK (auth.uid() = user_id);
+                
+              CREATE POLICY "Users can update their own tokens"
+                ON public.gmail_tokens
+                FOR UPDATE
+                USING (auth.uid() = user_id);
+                
+              CREATE POLICY "Users can delete their own tokens"
+                ON public.gmail_tokens
+                FOR DELETE
+                USING (auth.uid() = user_id);
+            END IF;
+          EXCEPTION
+            WHEN OTHERS THEN
+              RAISE NOTICE 'Error creating policies: %', SQLERRM;
+          END
+          $$;
+        `;
         
-        -- Add RLS policy if it doesn't exist (wrapped in anonymous DO block)
-        DO $$
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies 
-            WHERE tablename = 'gmail_tokens' 
-            AND policyname = 'Users can view their own tokens'
-          ) THEN
-            ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
-            
-            CREATE POLICY "Users can view their own tokens"
-              ON public.gmail_tokens
-              FOR SELECT
-              USING (auth.uid() = user_id);
-              
-            CREATE POLICY "Users can insert their own tokens"
-              ON public.gmail_tokens
-              FOR INSERT
-              WITH CHECK (auth.uid() = user_id);
-              
-            CREATE POLICY "Users can update their own tokens"
-              ON public.gmail_tokens
-              FOR UPDATE
-              USING (auth.uid() = user_id);
-              
-            CREATE POLICY "Users can delete their own tokens"
-              ON public.gmail_tokens
-              FOR DELETE
-              USING (auth.uid() = user_id);
-          END IF;
-        EXCEPTION
-          WHEN OTHERS THEN
-            -- Log the error but don't fail
-            RAISE NOTICE 'Error creating policies: %', SQLERRM;
-        END
-        $$;
-      `;
-      
-      // Execute the SQL using service role permissions
-      await supabase.rpc('exec_sql', { sql: createTableSQL });
-      console.log('Table and policies created/confirmed');
+        // Execute the SQL using service role permissions
+        await supabase.rpc('exec_sql', { sql: createTableSQL });
+      }
     } catch (tableError) {
-      // Log but continue - we're using service role so we can still insert
-      console.error('Error during table creation attempt:', tableError);
-      // We can proceed anyway since we're using service role key
+      console.error('Error during table creation/check:', tableError);
+      // Continue anyway since we're using service role key
+    }
+
+    // Try to delete any existing tokens for this user
+    console.log('Removing any existing tokens for user')
+    try {
+      await supabase
+        .from('gmail_tokens')
+        .delete()
+        .eq('user_id', userIdParam)
+    } catch (deleteError) {
+      console.error('Error deleting existing tokens:', deleteError)
+      // Continue anyway
     }
 
     // Store the tokens
-    console.log('Storing tokens in database')
-    console.log('User ID for token storage:', userIdParam);
-    
-    const { error } = await supabase.from('gmail_tokens').insert({
-      user_id: userIdParam,
-      access_token: data.access_token,
-      refresh_token: data.refresh_token,
-      expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
-    })
+    console.log('Storing new tokens in database')
+    const { error: insertError } = await supabase
+      .from('gmail_tokens')
+      .insert({
+        user_id: userIdParam,
+        access_token: data.access_token,
+        refresh_token: data.refresh_token,
+        expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),
+      })
 
-    if (error) {
-      console.error('Error storing tokens:', error)
-      throw new Error(`Failed to store tokens: ${error.message}`)
+    if (insertError) {
+      console.error('Error storing tokens:', insertError)
+      return new Response(
+        null,
+        { 
+          headers: { 
+            ...corsHeaders,
+            'Location': '/?error=token_storage_failed'
+          },
+          status: 302 
+        }
+      )
     }
 
     console.log('Successfully stored tokens in database')
@@ -204,14 +276,17 @@ serve(async (req) => {
         status: 302
       }
     )
-
   } catch (error) {
-    console.error('Error in Gmail callback:', error)
+    // Catch-all error handler
+    console.error('Uncaught error in Gmail callback:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      null,
       { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500 
+        headers: { 
+          ...corsHeaders,
+          'Location': `/?error=${encodeURIComponent(error.message || 'unknown_error')}`
+        },
+        status: 302 
       }
     )
   }

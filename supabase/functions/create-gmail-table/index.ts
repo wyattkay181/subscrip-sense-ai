@@ -8,25 +8,40 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
+console.log('Create Gmail Table function loaded and running')
+
 serve(async (req) => {
+  console.log('Create Gmail Table function invoked')
+  
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request with CORS headers')
     return new Response(null, { headers: corsHeaders })
   }
+  
+  console.log('Request method:', req.method)
+  console.log('Request headers:', Object.fromEntries(req.headers.entries()))
   
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
+    console.log('Environment variables check:')
+    console.log('- SUPABASE_URL present:', !!supabaseUrl)
+    console.log('- SUPABASE_SERVICE_ROLE_KEY present:', !!supabaseServiceKey)
+    
     if (!supabaseUrl || !supabaseServiceKey) {
       throw new Error('Missing Supabase environment variables');
     }
     
+    console.log('Creating Supabase client')
     const supabase = createClient(
       supabaseUrl,
       supabaseServiceKey
     );
 
+    console.log('Creating table if it does not exist')
+    
     // Use direct SQL to create the table and policies with service role
     const createTableSQL = `
       CREATE TABLE IF NOT EXISTS public.gmail_tokens (
@@ -76,6 +91,7 @@ serve(async (req) => {
       $$;
     `;
     
+    console.log('Executing SQL to create table and policies')
     // Execute the SQL using service role permissions
     const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL });
     
@@ -84,15 +100,22 @@ serve(async (req) => {
       throw error;
     }
 
+    console.log('Table created or verified successfully')
     return new Response(
-      JSON.stringify({ message: 'Table created successfully' }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: true, message: 'Table created or verified successfully' }),
+      { 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200
+      }
     );
   } catch (error) {
     console.error('Error in create-gmail-table function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      JSON.stringify({ success: false, error: error.message }),
+      { 
+        status: 500, 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      }
     );
   }
 })

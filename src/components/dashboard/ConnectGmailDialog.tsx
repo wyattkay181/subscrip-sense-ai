@@ -31,12 +31,13 @@ const ConnectGmailDialog = () => {
     
     const errorParam = searchParams.get('error');
     if (errorParam) {
+      console.error('Gmail connection error:', errorParam);
       toast({
         title: "Connection Error",
         description: `Gmail connection failed: ${errorParam}`,
         variant: "destructive",
       });
-      navigate('/');
+      navigate('/', { replace: true });
     }
   }, [location, navigate, toast]);
 
@@ -67,6 +68,8 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
+      console.log('Starting OAuth flow with token:', session.access_token);
+      
       // Use the publishable key from the client file
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
@@ -79,8 +82,8 @@ const ConnectGmailDialog = () => {
       
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('Error response:', errorData);
-        setError(`Failed to start authentication: ${errorData.error || response.statusText}`);
+        console.error('Error response from gmail-auth-url:', response.status, errorData);
+        setError(`Failed to start authentication: ${errorData.error || response.statusText} (Status: ${response.status})`);
         setIsLoading(false);
         return;
       }
@@ -88,12 +91,13 @@ const ConnectGmailDialog = () => {
       const responseData = await response.json();
       
       if (!responseData?.url) {
-        console.error('No URL returned:', responseData);
+        console.error('No URL returned from gmail-auth-url:', responseData);
         setError('Failed to get authorization URL from server');
         setIsLoading(false);
         return;
       }
       
+      console.log('Redirecting to Google OAuth URL:', responseData.url);
       window.location.href = responseData.url;
     } catch (error) {
       console.error('OAuth initiation error:', error);
@@ -147,7 +151,7 @@ const ConnectGmailDialog = () => {
           
           {error && (
             <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">
-              Error: {error}
+              {error}
             </div>
           )}
           
