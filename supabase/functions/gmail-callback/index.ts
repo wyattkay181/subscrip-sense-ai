@@ -110,9 +110,9 @@ serve(async (req) => {
       supabaseServiceKey
     )
 
-    // Create the table directly with SQL using service role
     console.log('Creating table if it does not exist');
     
+    // Create the table directly with SQL using service role
     try {
       // Use direct SQL to create the table if it doesn't exist
       const createTableSQL = `
@@ -125,7 +125,7 @@ serve(async (req) => {
           created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
         );
         
-        -- Add RLS policy if it doesn't exist (will fail silently if policy exists)
+        -- Add RLS policy if it doesn't exist (wrapped in anonymous DO block)
         DO $$
         BEGIN
           IF NOT EXISTS (
@@ -157,22 +157,25 @@ serve(async (req) => {
           END IF;
         EXCEPTION
           WHEN OTHERS THEN
-            -- Ignore errors for policy creation, we're using service role anyway
-            NULL;
+            -- Log the error but don't fail
+            RAISE NOTICE 'Error creating policies: %', SQLERRM;
         END
         $$;
       `;
       
-      // Use the Postgres function executor
+      // Execute the SQL using service role permissions
       await supabase.rpc('exec_sql', { sql: createTableSQL });
+      console.log('Table and policies created/confirmed');
     } catch (tableError) {
       // Log but continue - we're using service role so we can still insert
-      console.warn('Error during table creation attempt:', tableError);
+      console.error('Error during table creation attempt:', tableError);
       // We can proceed anyway since we're using service role key
     }
 
     // Store the tokens
     console.log('Storing tokens in database')
+    console.log('User ID for token storage:', userIdParam);
+    
     const { error } = await supabase.from('gmail_tokens').insert({
       user_id: userIdParam,
       access_token: data.access_token,

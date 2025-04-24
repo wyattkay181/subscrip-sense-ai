@@ -67,13 +67,13 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
-      // Skip table creation attempt - the edge function will handle it
-      
+      // Explicitly use the anon key for this request
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
         }
       });
       
