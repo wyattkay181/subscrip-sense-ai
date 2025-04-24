@@ -101,22 +101,32 @@ serve(async (req) => {
       supabaseServiceKey
     )
 
-    // Create the table directly if it doesn't exist
-    console.log('Ensuring gmail_tokens table exists')
-    const { error: sqlError } = await supabase.from('_exec_sql').select('*').execute(`
-      CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        access_token TEXT NOT NULL,
-        refresh_token TEXT,
-        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-      );
-      
-      ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
-    `)
-    
-    if (sqlError) {
-      console.error('Error creating table directly:', sqlError)
+    // Try to create the table directly before inserting
+    console.log('Creating table if it does not exist');
+    try {
+      // Use a simpler SQL command that doesn't use RLS policies
+      const { error: createTableError } = await supabase.rpc('create_gmail_tokens_table');
+      if (createTableError) {
+        console.error('Error creating table via RPC:', createTableError);
+        
+        // Try direct SQL as alternative 
+        const simpleCreateSQL = `
+          CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+          )
+        `;
+        
+        // Execute with raw query
+        console.log('Attempting direct SQL create');
+        await supabase.rpc('exec_sql', { sql: simpleCreateSQL });
+      }
+    } catch (tableError) {
+      // Log but continue - table might already exist
+      console.warn('Error during table creation attempt:', tableError);
     }
 
     // Store the tokens
