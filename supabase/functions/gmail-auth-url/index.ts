@@ -63,7 +63,8 @@ serve(async (req) => {
     url.searchParams.append('response_type', 'code')
     
     // Add the user ID as state parameter
-    url.searchParams.append('user_id', userId)
+    // Using state parameter is the standard approach for OAuth flows
+    url.searchParams.append('state', userId)
     
     // Updated scopes for comprehensive access
     url.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile')

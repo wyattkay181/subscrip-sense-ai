@@ -26,7 +26,7 @@ serve(async (req) => {
     
     const code = url.searchParams.get('code')
     const error = url.searchParams.get('error')
-    const userIdParam = url.searchParams.get('user_id')
+    const userIdParam = url.searchParams.get('state') // Google OAuth returns user_id as state parameter
     
     // Handle error from Google OAuth flow
     if (error) {
@@ -110,33 +110,65 @@ serve(async (req) => {
       supabaseServiceKey
     )
 
-    // Try to create the table directly before inserting
+    // Create the table directly with SQL using service role
     console.log('Creating table if it does not exist');
+    
     try {
-      // Use a simpler SQL command that doesn't use RLS policies
-      const { error: createTableError } = await supabase.rpc('create_gmail_tokens_table');
-      if (createTableError) {
-        console.error('Error creating table via RPC:', createTableError);
+      // Use direct SQL to create the table if it doesn't exist
+      const createTableSQL = `
+        CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+          user_id UUID NOT NULL,
+          access_token TEXT NOT NULL,
+          refresh_token TEXT,
+          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+        );
         
-        // Try direct SQL as alternative 
-        const simpleCreateSQL = `
-          CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-            user_id UUID NOT NULL,
-            access_token TEXT NOT NULL,
-            refresh_token TEXT,
-            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-          )
-        `;
-        
-        // Execute with raw query
-        console.log('Attempting direct SQL create');
-        await supabase.rpc('exec_sql', { sql: simpleCreateSQL });
-      }
+        -- Add RLS policy if it doesn't exist (will fail silently if policy exists)
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_policies 
+            WHERE tablename = 'gmail_tokens' 
+            AND policyname = 'Users can view their own tokens'
+          ) THEN
+            ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+            
+            CREATE POLICY "Users can view their own tokens"
+              ON public.gmail_tokens
+              FOR SELECT
+              USING (auth.uid() = user_id);
+              
+            CREATE POLICY "Users can insert their own tokens"
+              ON public.gmail_tokens
+              FOR INSERT
+              WITH CHECK (auth.uid() = user_id);
+              
+            CREATE POLICY "Users can update their own tokens"
+              ON public.gmail_tokens
+              FOR UPDATE
+              USING (auth.uid() = user_id);
+              
+            CREATE POLICY "Users can delete their own tokens"
+              ON public.gmail_tokens
+              FOR DELETE
+              USING (auth.uid() = user_id);
+          END IF;
+        EXCEPTION
+          WHEN OTHERS THEN
+            -- Ignore errors for policy creation, we're using service role anyway
+            NULL;
+        END
+        $$;
+      `;
+      
+      // Use the Postgres function executor
+      await supabase.rpc('exec_sql', { sql: createTableSQL });
     } catch (tableError) {
-      // Log but continue - table might already exist
+      // Log but continue - we're using service role so we can still insert
       console.warn('Error during table creation attempt:', tableError);
+      // We can proceed anyway since we're using service role key
     }
 
     // Store the tokens

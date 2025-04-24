@@ -51,24 +51,6 @@ const ConnectGmailDialog = () => {
     setError(null);
   };
 
-  const createGmailTable = async () => {
-    try {
-      const { error } = await supabase.rpc('create_gmail_tokens_table');
-      
-      if (error) {
-        console.error('Table creation error:', error);
-        setError(`Failed to prepare for Gmail connection: ${error.message}`);
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('Error creating Gmail table:', error);
-      setError(`Failed to prepare for Gmail connection: ${error instanceof Error ? error.message : String(error)}`);
-      return false;
-    }
-  };
-
   const initiateOAuthFlow = async () => {
     try {
       if (!user || !session) {
@@ -85,11 +67,7 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
-      const tableCreated = await createGmailTable();
-      if (!tableCreated) {
-        setIsLoading(false);
-        return;
-      }
+      // Skip table creation attempt - the edge function will handle it
       
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
