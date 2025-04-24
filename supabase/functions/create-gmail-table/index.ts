@@ -84,14 +84,15 @@ serve(async (req) => {
         
         console.log('Table created successfully');
         
-        // Create RLS policies - FIXED SYNTAX
+        // Create RLS policies with fixed syntax
         console.log('Creating RLS policies');
         
         // Users can view their own tokens
         try {
           await connection.queryObject(`
             CREATE POLICY "Users can view their own tokens" 
-            ON public.gmail_tokens FOR SELECT 
+            ON public.gmail_tokens 
+            FOR SELECT 
             USING (auth.uid() = user_id);
           `);
           console.log('SELECT policy created successfully');
@@ -103,7 +104,8 @@ serve(async (req) => {
         try {
           await connection.queryObject(`
             CREATE POLICY "Users can insert their own tokens" 
-            ON public.gmail_tokens FOR INSERT 
+            ON public.gmail_tokens 
+            FOR INSERT 
             WITH CHECK (auth.uid() = user_id);
           `);
           console.log('INSERT policy created successfully');
@@ -115,7 +117,8 @@ serve(async (req) => {
         try {
           await connection.queryObject(`
             CREATE POLICY "Users can update their own tokens" 
-            ON public.gmail_tokens FOR UPDATE 
+            ON public.gmail_tokens 
+            FOR UPDATE 
             USING (auth.uid() = user_id);
           `);
           console.log('UPDATE policy created successfully');
@@ -127,7 +130,8 @@ serve(async (req) => {
         try {
           await connection.queryObject(`
             CREATE POLICY "Users can delete their own tokens" 
-            ON public.gmail_tokens FOR DELETE 
+            ON public.gmail_tokens 
+            FOR DELETE 
             USING (auth.uid() = user_id);
           `);
           console.log('DELETE policy created successfully');

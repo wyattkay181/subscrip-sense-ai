@@ -203,10 +203,10 @@ serve(async (req) => {
         // Create RLS policies with correct syntax - fixing the issues
         console.log('Creating or updating RLS policies');
         
-        // Users can view their own tokens
+        // Users can view their own tokens - FIXED SYNTAX ERROR
         try {
           await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
+            CREATE POLICY "Users can view their own tokens" 
             ON public.gmail_tokens 
             FOR SELECT 
             USING (auth.uid() = user_id);
@@ -217,10 +217,10 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can insert their own tokens
+        // Users can insert their own tokens - FIXED SYNTAX ERROR
         try {
           await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
+            CREATE POLICY "Users can insert their own tokens" 
             ON public.gmail_tokens 
             FOR INSERT 
             WITH CHECK (auth.uid() = user_id);
@@ -231,10 +231,10 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can update their own tokens
+        // Users can update their own tokens - FIXED SYNTAX ERROR
         try {
           await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
+            CREATE POLICY "Users can update their own tokens" 
             ON public.gmail_tokens 
             FOR UPDATE 
             USING (auth.uid() = user_id);
@@ -245,10 +245,10 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can delete their own tokens
+        // Users can delete their own tokens - FIXED SYNTAX ERROR
         try {
           await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
+            CREATE POLICY "Users can delete their own tokens" 
             ON public.gmail_tokens 
             FOR DELETE 
             USING (auth.uid() = user_id);
