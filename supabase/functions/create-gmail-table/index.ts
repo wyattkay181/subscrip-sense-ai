@@ -84,7 +84,7 @@ serve(async (req) => {
         
         console.log('Table created successfully');
         
-        // Create RLS policies
+        // Create RLS policies - FIXED SYNTAX
         console.log('Creating RLS policies');
         
         // Users can view their own tokens

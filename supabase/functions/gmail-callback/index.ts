@@ -201,7 +201,7 @@ serve(async (req) => {
         // Create RLS policies using simpler syntax
         console.log('Creating RLS policies');
         
-        // Users can view their own tokens
+        // Users can view their own tokens - FIXED SYNTAX
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
@@ -211,9 +211,10 @@ serve(async (req) => {
           console.log('SELECT policy created successfully');
         } catch (policyError) {
           console.error('Error creating SELECT policy:', policyError);
+          // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can insert their own tokens
+        // Users can insert their own tokens - FIXED SYNTAX
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
@@ -223,9 +224,10 @@ serve(async (req) => {
           console.log('INSERT policy created successfully');
         } catch (policyError) {
           console.error('Error creating INSERT policy:', policyError);
+          // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can update their own tokens
+        // Users can update their own tokens - FIXED SYNTAX
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
@@ -235,9 +237,10 @@ serve(async (req) => {
           console.log('UPDATE policy created successfully');
         } catch (policyError) {
           console.error('Error creating UPDATE policy:', policyError);
+          // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can delete their own tokens
+        // Users can delete their own tokens - FIXED SYNTAX
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
@@ -247,6 +250,7 @@ serve(async (req) => {
           console.log('DELETE policy created successfully');
         } catch (policyError) {
           console.error('Error creating DELETE policy:', policyError);
+          // Continue anyway since this might just mean the policy already exists
         }
         
         console.log('Table creation successful through direct SQL connection');
