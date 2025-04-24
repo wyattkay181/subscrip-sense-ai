@@ -195,71 +195,60 @@ serve(async (req) => {
           );
           
           -- Enable RLS
-          ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+          ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
         `);
         
         console.log('Table created or exists already');
         
-        // Create RLS policies with correct syntax - fixing the issues
-        console.log('Creating or updating RLS policies');
+        // Instead of trying to create policies, just check if they exist
+        console.log('Checking for existing policies');
+        const existingPolicies = await connection.queryObject(`
+          SELECT policyname FROM pg_policies 
+          WHERE tablename = 'gmail_tokens' AND schemaname = 'public';
+        `);
         
-        // Users can view their own tokens - MODIFIED to use IF NOT EXISTS
-        try {
-          await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
-            ON public.gmail_tokens 
-            FOR SELECT 
-            USING (auth.uid() = user_id);
-          `);
-          console.log('SELECT policy created or already exists');
-        } catch (policyError) {
-          console.error('Error with SELECT policy:', policyError);
-          // Continue anyway since we've added IF NOT EXISTS
+        console.log('Existing policies:', existingPolicies.rows);
+        
+        // Only create policies if none exist
+        if (existingPolicies.rows.length === 0) {
+          console.log('No policies exist, creating them');
+          
+          try {
+            // Create all policies in a single transaction
+            await connection.queryObject(`BEGIN;`);
+            
+            await connection.queryObject(`
+              CREATE POLICY "Users can view their own tokens" 
+              ON public.gmail_tokens 
+              FOR SELECT 
+              USING (auth.uid() = user_id);
+              
+              CREATE POLICY "Users can insert their own tokens" 
+              ON public.gmail_tokens 
+              FOR INSERT 
+              WITH CHECK (auth.uid() = user_id);
+              
+              CREATE POLICY "Users can update their own tokens" 
+              ON public.gmail_tokens 
+              FOR UPDATE 
+              USING (auth.uid() = user_id);
+              
+              CREATE POLICY "Users can delete their own tokens" 
+              ON public.gmail_tokens 
+              FOR DELETE 
+              USING (auth.uid() = user_id);
+            `);
+            
+            await connection.queryObject(`COMMIT;`);
+            console.log('Successfully created all policies');
+          } catch (policyError) {
+            console.error('Error creating policies:', policyError);
+            await connection.queryObject(`ROLLBACK;`);
+            // Continue anyway since this isn't critical for token storage
+          }
+        } else {
+          console.log('Policies already exist, skipping creation');
         }
-        
-        // Users can insert their own tokens - MODIFIED to use IF NOT EXISTS
-        try {
-          await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
-            ON public.gmail_tokens 
-            FOR INSERT 
-            WITH CHECK (auth.uid() = user_id);
-          `);
-          console.log('INSERT policy created or already exists');
-        } catch (policyError) {
-          console.error('Error with INSERT policy:', policyError);
-          // Continue anyway since we've added IF NOT EXISTS
-        }
-        
-        // Users can update their own tokens - MODIFIED to use IF NOT EXISTS
-        try {
-          await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
-            ON public.gmail_tokens 
-            FOR UPDATE 
-            USING (auth.uid() = user_id);
-          `);
-          console.log('UPDATE policy created or already exists');
-        } catch (policyError) {
-          console.error('Error with UPDATE policy:', policyError);
-          // Continue anyway since we've added IF NOT EXISTS
-        }
-        
-        // Users can delete their own tokens - MODIFIED to use IF NOT EXISTS
-        try {
-          await connection.queryObject(`
-            CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
-            ON public.gmail_tokens 
-            FOR DELETE 
-            USING (auth.uid() = user_id);
-          `);
-          console.log('DELETE policy created or already exists');
-        } catch (policyError) {
-          console.error('Error with DELETE policy:', policyError);
-          // Continue anyway since we've added IF NOT EXISTS
-        }
-        
-        console.log('Policies created or updated successfully');
         
         // Verify the table exists
         const { rows } = await connection.queryObject(`
