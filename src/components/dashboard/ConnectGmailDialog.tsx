@@ -63,6 +63,19 @@ const ConnectGmailDialog = () => {
 
   const initiateOAuthFlow = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        setError('You must be logged in to connect Gmail');
+        toast({
+          title: "Authentication Required",
+          description: "Please log in to connect your Gmail account.",
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       setError(null);
       
@@ -71,9 +84,6 @@ const ConnectGmailDialog = () => {
         setIsLoading(false);
         return;
       }
-      
-      // Removed unnecessary query that was causing issues
-      // We don't need to query the table - just ensure it exists
       
       const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
@@ -91,7 +101,6 @@ const ConnectGmailDialog = () => {
         return;
       }
       
-      // Rename to responseData to avoid duplicate variable name
       const responseData = await response.json();
       
       if (!responseData?.url) {
