@@ -43,6 +43,11 @@ serve(async (req) => {
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
 
+    console.log('Environment variable check:')
+    console.log('- GOOGLE_CLIENT_ID present:', !!clientId)
+    console.log('- GOOGLE_CLIENT_SECRET present:', !!clientSecret) 
+    console.log('- GOOGLE_REDIRECT_URI value:', redirectUri)
+
     if (!clientId || !clientSecret || !redirectUri) {
       console.error('Missing required environment variables', {
         hasClientId: !!clientId,
