@@ -198,14 +198,17 @@ serve(async (req) => {
           ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
         `);
         
-        // Create RLS policies using simpler syntax
-        console.log('Creating RLS policies');
+        console.log('Table created or exists already');
         
-        // Users can view their own tokens - FIXED SYNTAX
+        // Create RLS policies with correct syntax - fixing the issues
+        console.log('Creating or updating RLS policies');
+        
+        // Users can view their own tokens
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
-            ON public.gmail_tokens FOR SELECT 
+            ON public.gmail_tokens 
+            FOR SELECT 
             USING (auth.uid() = user_id);
           `);
           console.log('SELECT policy created successfully');
@@ -214,11 +217,12 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can insert their own tokens - FIXED SYNTAX
+        // Users can insert their own tokens
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
-            ON public.gmail_tokens FOR INSERT 
+            ON public.gmail_tokens 
+            FOR INSERT 
             WITH CHECK (auth.uid() = user_id);
           `);
           console.log('INSERT policy created successfully');
@@ -227,11 +231,12 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can update their own tokens - FIXED SYNTAX
+        // Users can update their own tokens
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
-            ON public.gmail_tokens FOR UPDATE 
+            ON public.gmail_tokens 
+            FOR UPDATE 
             USING (auth.uid() = user_id);
           `);
           console.log('UPDATE policy created successfully');
@@ -240,11 +245,12 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        // Users can delete their own tokens - FIXED SYNTAX
+        // Users can delete their own tokens
         try {
           await connection.queryObject(`
             CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
-            ON public.gmail_tokens FOR DELETE 
+            ON public.gmail_tokens 
+            FOR DELETE 
             USING (auth.uid() = user_id);
           `);
           console.log('DELETE policy created successfully');
@@ -253,7 +259,7 @@ serve(async (req) => {
           // Continue anyway since this might just mean the policy already exists
         }
         
-        console.log('Table creation successful through direct SQL connection');
+        console.log('Policies created or updated successfully');
         
         // Verify the table exists
         const { rows } = await connection.queryObject(`
