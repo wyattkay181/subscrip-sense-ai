@@ -1,33 +1,24 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Mail, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/providers/AuthProvider";
 
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const { user } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check authentication status when component mounts
-  useEffect(() => {
-    const checkAuthStatus = async () => {
-      const { data } = await supabase.auth.getUser();
-      setIsAuthenticated(!!data.user);
-    };
-    
-    checkAuthStatus();
-  }, []);
-
   // Check for successful Gmail connection or errors
-  useEffect(() => {
+  React.useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
     
     if (searchParams.get('gmail-connected') === 'true') {
@@ -50,6 +41,12 @@ const ConnectGmailDialog = () => {
   }, [location, navigate, toast]);
 
   const handleConnectGmail = () => {
+    if (!user) {
+      // Redirect to auth page with a redirect back to current page
+      navigate(`/auth?redirect=${encodeURIComponent(location.pathname)}`);
+      return;
+    }
+    
     setOpen(true);
     setError(null);
   };
@@ -74,8 +71,6 @@ const ConnectGmailDialog = () => {
 
   const initiateOAuthFlow = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
       if (!user) {
         setError('You must be logged in to connect Gmail');
         toast({
@@ -159,7 +154,7 @@ const ConnectGmailDialog = () => {
             </DialogDescription>
           </DialogHeader>
           
-          {isAuthenticated === false && (
+          {!user && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
               <h4 className="text-sm font-medium flex items-center text-amber-800 mb-1">
                 <LogIn className="w-4 h-4 mr-1" />
@@ -183,7 +178,7 @@ const ConnectGmailDialog = () => {
               variant="default"
               className="w-full"
               onClick={initiateOAuthFlow}
-              disabled={isLoading || isAuthenticated === false}
+              disabled={isLoading || !user}
             >
               {isLoading ? "Connecting..." : "Continue with Gmail"}
             </Button>
