@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Mail } from "lucide-react";
+import { Mail, LogIn } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,9 +11,20 @@ const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Check authentication status when component mounts
+  useEffect(() => {
+    const checkAuthStatus = async () => {
+      const { data } = await supabase.auth.getUser();
+      setIsAuthenticated(!!data.user);
+    };
+    
+    checkAuthStatus();
+  }, []);
 
   // Check for successful Gmail connection or errors
   useEffect(() => {
@@ -148,6 +159,19 @@ const ConnectGmailDialog = () => {
             </DialogDescription>
           </DialogHeader>
           
+          {isAuthenticated === false && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-md mb-4">
+              <h4 className="text-sm font-medium flex items-center text-amber-800 mb-1">
+                <LogIn className="w-4 h-4 mr-1" />
+                Authentication Required
+              </h4>
+              <p className="text-sm text-amber-700">
+                You need to be logged in to connect your Gmail account.
+                Please create an account or sign in first.
+              </p>
+            </div>
+          )}
+          
           {error && (
             <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md">
               Error: {error}
@@ -159,7 +183,7 @@ const ConnectGmailDialog = () => {
               variant="default"
               className="w-full"
               onClick={initiateOAuthFlow}
-              disabled={isLoading}
+              disabled={isLoading || isAuthenticated === false}
             >
               {isLoading ? "Connecting..." : "Continue with Gmail"}
             </Button>
