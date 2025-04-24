@@ -26,6 +26,7 @@ serve(async (req) => {
     
     const code = url.searchParams.get('code')
     const error = url.searchParams.get('error')
+    const userIdParam = url.searchParams.get('user_id')
     
     // Handle error from Google OAuth flow
     if (error) {
@@ -40,6 +41,14 @@ serve(async (req) => {
       console.error('No authorization code provided in URL params')
       return new Response(
         JSON.stringify({ error: 'No authorization code provided in the callback URL' }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    if (!userIdParam) {
+      console.error('No user_id provided in URL params')
+      return new Response(
+        JSON.stringify({ error: 'No user_id provided in the callback URL' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
@@ -113,6 +122,7 @@ serve(async (req) => {
         const simpleCreateSQL = `
           CREATE TABLE IF NOT EXISTS public.gmail_tokens (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL,
             access_token TEXT NOT NULL,
             refresh_token TEXT,
             expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -132,6 +142,7 @@ serve(async (req) => {
     // Store the tokens
     console.log('Storing tokens in database')
     const { error } = await supabase.from('gmail_tokens').insert({
+      user_id: userIdParam,
       access_token: data.access_token,
       refresh_token: data.refresh_token,
       expires_at: new Date(Date.now() + data.expires_in * 1000).toISOString(),

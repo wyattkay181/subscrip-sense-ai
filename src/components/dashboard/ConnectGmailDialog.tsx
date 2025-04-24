@@ -12,7 +12,7 @@ const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
   const navigate = useNavigate();
@@ -71,7 +71,7 @@ const ConnectGmailDialog = () => {
 
   const initiateOAuthFlow = async () => {
     try {
-      if (!user) {
+      if (!user || !session) {
         setError('You must be logged in to connect Gmail');
         toast({
           title: "Authentication Required",
@@ -95,7 +95,7 @@ const ConnectGmailDialog = () => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
+          'Authorization': `Bearer ${session.access_token}`
         }
       });
       

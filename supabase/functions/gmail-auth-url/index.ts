@@ -18,6 +18,31 @@ serve(async (req) => {
   console.log('Request headers:', Object.fromEntries(req.headers.entries()))
 
   try {
+    // Check if we have a valid user ID
+    const authHeader = req.headers.get('authorization')
+    if (!authHeader) {
+      throw new Error('Missing authorization header')
+    }
+
+    // Extract user ID from request if possible
+    let userId = null
+    try {
+      // Try to parse the JWT to get the user ID
+      const token = authHeader.replace('Bearer ', '')
+      const base64Url = token.split('.')[1]
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+      const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+      }).join(''))
+      
+      const payload = JSON.parse(jsonPayload)
+      userId = payload.sub
+      console.log('Authenticated user ID:', userId)
+    } catch (error) {
+      console.error('Error extracting user ID from token:', error)
+      throw new Error('Invalid authentication token')
+    }
+
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
     
@@ -36,6 +61,9 @@ serve(async (req) => {
     url.searchParams.append('client_id', clientId)
     url.searchParams.append('redirect_uri', redirectUri)
     url.searchParams.append('response_type', 'code')
+    
+    // Add the user ID as state parameter
+    url.searchParams.append('user_id', userId)
     
     // Updated scopes for comprehensive access
     url.searchParams.append('scope', 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile')
