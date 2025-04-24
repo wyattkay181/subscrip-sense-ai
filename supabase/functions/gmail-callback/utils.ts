@@ -5,9 +5,25 @@ export const corsHeaders = {
 }
 
 export const getRedirectBaseUrl = (requestUrl: string) => {
-  // Remove the function path from the URL to get the base URL
+  // Extract the domain from the URL using URL object
   const url = new URL(requestUrl);
-  return url.origin.replace('.supabase.co/functions/v1/gmail-callback', '.lovableproject.com');
+  
+  // Get the origin (scheme + hostname + port)
+  const origin = url.origin;
+  
+  // Replace Supabase function URL with user app domain
+  // This handles different Supabase URLs and production vs development environments
+  if (origin.includes('.supabase.co')) {
+    const appDomain = origin.split('.supabase.co')[0].split('://')[1];
+    // For lovable projects, use lovableproject.com domain
+    if (appDomain.includes('nggmgtwwosrtwbmjpezi')) {
+      // Return the actual app domain
+      return 'https://preview--subscrip-sense-ai.lovable.app';
+    }
+  }
+  
+  // Fallback to origin if we can't determine the app domain
+  return origin;
 };
 
 export const createRedirectResponse = (redirectBaseUrl: string, params: Record<string, string>) => {

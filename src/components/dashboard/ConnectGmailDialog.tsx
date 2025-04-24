@@ -21,8 +21,17 @@ const ConnectGmailDialog = () => {
   const startSubscriptionScan = async () => {
     try {
       setIsScanning(true);
+      
+      // Get the current session for the authorization header
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('No active session');
+      }
+      
       const { data, error } = await supabase.functions.invoke('scan-subscriptions', {
-        body: { action: 'start-scan' }
+        headers: {
+          Authorization: `Bearer ${session.access_token}`
+        }
       });
 
       if (error) throw error;

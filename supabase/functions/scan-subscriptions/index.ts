@@ -13,7 +13,14 @@ serve(async (req) => {
   try {
     validateEnvironmentVariables();
 
-    const { user } = await getUser(req);
+    // Extract authorization header from the incoming request
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing authorization header');
+    }
+
+    // Validate the user is authenticated
+    const user = await getUser(req, authHeader);
     if (!user) {
       throw new Error('Unauthorized');
     }
@@ -41,18 +48,13 @@ serve(async (req) => {
       JSON.stringify({ error: error.message }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400
+        status: error.message === 'Missing authorization header' ? 401 : 400
       }
     );
   }
 });
 
-async function getUser(req: Request) {
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    throw new Error('Missing auth header');
-  }
-
+async function getUser(req: Request, authHeader: string) {
   const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/auth/v1/user`, {
     headers: {
       Authorization: authHeader,
