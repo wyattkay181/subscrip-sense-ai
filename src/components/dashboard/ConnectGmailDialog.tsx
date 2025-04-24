@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Mail } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
-import { supabase, SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
+import { supabase } from "@/integrations/supabase/client";
 
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
@@ -24,10 +24,9 @@ const ConnectGmailDialog = () => {
         title: "Success!",
         description: "Gmail successfully connected.",
       });
-      navigate('/'); // Remove the query parameter
+      navigate('/');
     }
     
-    // Check for error in URL params (could be added to the callback URL)
     const errorParam = searchParams.get('error');
     if (errorParam) {
       toast({
@@ -39,67 +38,49 @@ const ConnectGmailDialog = () => {
     }
   }, [location, navigate, toast]);
 
-  // Handler for connecting Gmail
   const handleConnectGmail = () => {
     setOpen(true);
     setError(null);
   };
 
-  // First, let's try to create the gmail_tokens table
   const createGmailTable = async () => {
     try {
-      console.log('Attempting to create Gmail tokens table');
+      const { data, error } = await supabase.rpc('create_gmail_tokens_table');
       
-      const tableResponse = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/create-gmail-table', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-          'apikey': SUPABASE_PUBLISHABLE_KEY
-        }
-      });
-      
-      if (!tableResponse.ok) {
-        const errorData = await tableResponse.json();
-        console.error('Table creation failed:', errorData);
-        setError(`Failed to prepare for Gmail connection: ${errorData.error || 'Unknown error'}`);
+      if (error) {
+        console.error('Table creation error:', error);
+        setError(`Failed to prepare for Gmail connection: ${error.message}`);
         return false;
       }
       
-      const responseData = await tableResponse.json();
-      console.log('Table creation response:', responseData);
       return true;
     } catch (error) {
       console.error('Error creating Gmail table:', error);
-      setError(`Error preparing for Gmail connection: ${error instanceof Error ? error.message : String(error)}`);
+      setError(`Failed to prepare for Gmail connection: ${error instanceof Error ? error.message : String(error)}`);
       return false;
     }
   };
 
-  // Initiate the OAuth flow
   const initiateOAuthFlow = async () => {
     try {
       setIsLoading(true);
       setError(null);
       
-      console.log('Initiating OAuth flow with Gmail');
-      
-      // First create the table to ensure it exists
       const tableCreated = await createGmailTable();
       if (!tableCreated) {
         setIsLoading(false);
         return;
       }
       
-      // Direct URL approach with proper headers
-      const authUrl = new URL(`https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url`);
+      const { data, error } = await supabase
+        .from('gmail_tokens')
+        .select();
       
-      const response = await fetch(authUrl, {
+      const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
-          'apikey': SUPABASE_PUBLISHABLE_KEY
+          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY
         }
       });
       
@@ -120,9 +101,6 @@ const ConnectGmailDialog = () => {
         return;
       }
       
-      console.log('Redirecting to Google auth URL:', data.url);
-      
-      // Redirect to Google's OAuth consent screen
       window.location.href = data.url;
     } catch (error) {
       console.error('OAuth initiation error:', error);
