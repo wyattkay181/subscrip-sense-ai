@@ -30,6 +30,11 @@ serve(async (req) => {
     console.log('Full URL received:', url.toString())
     console.log('Search params:', Object.fromEntries(url.searchParams.entries()))
     
+    // Make sure to use the correct baseURL for the redirect
+    // Extract the origin from the request URL to handle different environments
+    const redirectBaseUrl = new URL(req.url).origin.replace('nggmgtwwosrtwbmjpezi.supabase.co', 'lovableproject.com')
+    console.log('Redirect base URL:', redirectBaseUrl)
+    
     // Check for error parameter first - Google OAuth might return an error
     const error = url.searchParams.get('error')
     if (error) {
@@ -40,7 +45,7 @@ serve(async (req) => {
         {
           headers: {
             ...corsHeaders,
-            'Location': `/?error=${encodeURIComponent(error)}`
+            'Location': `${redirectBaseUrl}/?error=${encodeURIComponent(error)}`
           },
           status: 302
         }
@@ -59,7 +64,7 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Location': '/?error=missing_code'
+            'Location': `${redirectBaseUrl}/?error=missing_code`
           },
           status: 302 
         }
@@ -73,7 +78,7 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Location': '/?error=missing_user_id'
+            'Location': `${redirectBaseUrl}/?error=missing_user_id`
           },
           status: 302 
         }
@@ -109,7 +114,7 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Location': '/?error=missing_environment_variables'
+            'Location': `${redirectBaseUrl}/?error=missing_environment_variables`
           },
           status: 302 
         }
@@ -145,7 +150,7 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Location': `/?error=${encodeURIComponent(data.error || 'token_exchange_failed')}`
+            'Location': `${redirectBaseUrl}/?error=${encodeURIComponent(data.error || 'token_exchange_failed')}`
           },
           status: 302 
         }
@@ -332,7 +337,7 @@ serve(async (req) => {
         { 
           headers: { 
             ...corsHeaders,
-            'Location': `/?error=${encodeURIComponent('Database error: ' + dbError.message)}`
+            'Location': `${redirectBaseUrl}/?error=${encodeURIComponent('Database error: ' + dbError.message)}`
           },
           status: 302 
         }
@@ -346,7 +351,7 @@ serve(async (req) => {
       {
         headers: {
           ...corsHeaders,
-          'Location': '/?gmail-connected=true'
+          'Location': `${redirectBaseUrl}/?gmail-connected=true`
         },
         status: 302
       }
@@ -354,12 +359,21 @@ serve(async (req) => {
   } catch (error) {
     // Catch-all error handler
     console.error('Uncaught error in Gmail callback:', error);
+    // Try to determine redirect URL from the request
+    let redirectUrl = "/?error=" + encodeURIComponent(error.message || 'unknown_error');
+    try {
+      const baseUrl = new URL(req.url).origin.replace('nggmgtwwosrtwbmjpezi.supabase.co', 'lovableproject.com');
+      redirectUrl = `${baseUrl}${redirectUrl}`;
+    } catch (e) {
+      console.error('Error creating redirect URL:', e);
+    }
+    
     return new Response(
       null,
       { 
         headers: { 
           ...corsHeaders,
-          'Location': `/?error=${encodeURIComponent(error.message || 'unknown_error')}`
+          'Location': redirectUrl
         },
         status: 302 
       }

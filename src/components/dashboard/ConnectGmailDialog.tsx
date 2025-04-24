@@ -26,7 +26,10 @@ const ConnectGmailDialog = () => {
         title: "Success!",
         description: "Gmail successfully connected.",
       });
-      navigate('/');
+      
+      // Remove the query params without causing a full page refresh
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
     }
     
     const errorParam = searchParams.get('error');
@@ -37,14 +40,18 @@ const ConnectGmailDialog = () => {
         description: `Gmail connection failed: ${errorParam}`,
         variant: "destructive",
       });
-      navigate('/', { replace: true });
+      
+      // Remove the query params without causing a full page refresh
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
     }
-  }, [location, navigate, toast]);
+  }, [location, toast]);
 
   const handleConnectGmail = () => {
     if (!user) {
-      // Redirect to auth page with a redirect back to current page
-      navigate(`/auth?redirect=${encodeURIComponent(location.pathname)}`);
+      // Store current path for redirection after auth
+      const currentPath = location.pathname + location.search;
+      navigate(`/auth?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
     
