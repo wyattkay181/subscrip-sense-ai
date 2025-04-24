@@ -52,66 +52,8 @@ serve(async (req) => {
       console.log('Acquiring connection from pool');
       connection = await pool.connect();
       
-      console.log('Executing table creation SQL directly');
-      await connection.queryObject(`
-        CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-          id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-          user_id UUID NOT NULL,
-          access_token TEXT NOT NULL,
-          refresh_token TEXT,
-          expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-          created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-        );
-        
-        -- Enable RLS
-        ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
-        
-        -- Create policies for RLS
-        DO $$
-        BEGIN
-          -- Users can view their own tokens
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies 
-            WHERE tablename = 'gmail_tokens' AND policyname = 'Users can view their own tokens'
-          ) THEN
-            CREATE POLICY "Users can view their own tokens" 
-              ON public.gmail_tokens FOR SELECT USING (auth.uid() = user_id);
-          END IF;
-          
-          -- Users can insert their own tokens
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies 
-            WHERE tablename = 'gmail_tokens' AND policyname = 'Users can insert their own tokens'
-          ) THEN
-            CREATE POLICY "Users can insert their own tokens" 
-              ON public.gmail_tokens FOR INSERT WITH CHECK (auth.uid() = user_id);
-          END IF;
-          
-          -- Users can update their own tokens
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies 
-            WHERE tablename = 'gmail_tokens' AND policyname = 'Users can update their own tokens'
-          ) THEN
-            CREATE POLICY "Users can update their own tokens" 
-              ON public.gmail_tokens FOR UPDATE USING (auth.uid() = user_id);
-          END IF;
-          
-          -- Users can delete their own tokens
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies 
-            WHERE tablename = 'gmail_tokens' AND policyname = 'Users can delete their own tokens'
-          ) THEN
-            CREATE POLICY "Users can delete their own tokens" 
-              ON public.gmail_tokens FOR DELETE USING (auth.uid() = user_id);
-          END IF;
-        END
-        $$;
-      `);
-      
-      console.log('Table creation successful through direct SQL connection');
-      
-      // Verify the table exists
-      const { rows } = await connection.queryObject(`
+      // First check if the table already exists
+      const tableCheck = await connection.queryObject(`
         SELECT EXISTS (
           SELECT FROM pg_tables
           WHERE schemaname = 'public'
@@ -119,7 +61,93 @@ serve(async (req) => {
         );
       `);
       
-      console.log('Table existence check:', rows[0]);
+      const tableExists = tableCheck.rows[0].exists;
+      console.log('Table exists:', tableExists);
+
+      if (!tableExists) {
+        console.log('Table does not exist, creating it now');
+        
+        // Create the table
+        await connection.queryObject(`
+          CREATE TABLE public.gmail_tokens (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+            created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+          );
+          
+          -- Enable RLS
+          ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+        `);
+        
+        console.log('Table created successfully');
+        
+        // Create RLS policies
+        console.log('Creating RLS policies');
+        
+        // Users can view their own tokens
+        try {
+          await connection.queryObject(`
+            CREATE POLICY "Users can view their own tokens" 
+            ON public.gmail_tokens FOR SELECT 
+            USING (auth.uid() = user_id);
+          `);
+          console.log('SELECT policy created successfully');
+        } catch (policyError) {
+          console.error('Error creating SELECT policy:', policyError);
+        }
+        
+        // Users can insert their own tokens
+        try {
+          await connection.queryObject(`
+            CREATE POLICY "Users can insert their own tokens" 
+            ON public.gmail_tokens FOR INSERT 
+            WITH CHECK (auth.uid() = user_id);
+          `);
+          console.log('INSERT policy created successfully');
+        } catch (policyError) {
+          console.error('Error creating INSERT policy:', policyError);
+        }
+        
+        // Users can update their own tokens
+        try {
+          await connection.queryObject(`
+            CREATE POLICY "Users can update their own tokens" 
+            ON public.gmail_tokens FOR UPDATE 
+            USING (auth.uid() = user_id);
+          `);
+          console.log('UPDATE policy created successfully');
+        } catch (policyError) {
+          console.error('Error creating UPDATE policy:', policyError);
+        }
+        
+        // Users can delete their own tokens
+        try {
+          await connection.queryObject(`
+            CREATE POLICY "Users can delete their own tokens" 
+            ON public.gmail_tokens FOR DELETE 
+            USING (auth.uid() = user_id);
+          `);
+          console.log('DELETE policy created successfully');
+        } catch (policyError) {
+          console.error('Error creating DELETE policy:', policyError);
+        }
+      } else {
+        console.log('Table already exists, skipping creation');
+      }
+      
+      // Verify the table structure
+      const columns = await connection.queryObject(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        AND table_name = 'gmail_tokens'
+        ORDER BY ordinal_position;
+      `);
+      
+      console.log('Table structure verification:', columns.rows);
       
     } catch (pgError) {
       console.error('PostgreSQL Error:', pgError);
