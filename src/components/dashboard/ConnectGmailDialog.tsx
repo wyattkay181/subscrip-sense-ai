@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 
+// Import SUPABASE_PUBLISHABLE_KEY from client for consistent use across the app
+import { SUPABASE_PUBLISHABLE_KEY } from "@/integrations/supabase/client";
+
 const ConnectGmailDialog = () => {
   const [open, setOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +48,31 @@ const ConnectGmailDialog = () => {
     setError(null);
   };
 
+  // First, let's try to create the gmail_tokens table
+  const createGmailTable = async () => {
+    try {
+      console.log('Attempting to create Gmail tokens table');
+      
+      const tableResponse = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/create-gmail-table', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
+        }
+      });
+      
+      if (!tableResponse.ok) {
+        const errorData = await tableResponse.json();
+        console.log('Table creation response:', errorData);
+      } else {
+        console.log('Table creation successful');
+      }
+    } catch (error) {
+      console.error('Error creating Gmail table:', error);
+    }
+  };
+
   // Initiate the OAuth flow
   const initiateOAuthFlow = async () => {
     try {
@@ -53,15 +81,18 @@ const ConnectGmailDialog = () => {
       
       console.log('Initiating OAuth flow with Gmail');
       
+      // First create the table to ensure it exists
+      await createGmailTable();
+      
       // Important: Direct URL approach to avoid API key issues
       const authUrl = new URL(`https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url`);
       
-      // Use the SUPABASE_PUBLISHABLE_KEY from client.ts instead of auth.anon.key
       const response = await fetch(authUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24"}`,
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24`,
+          'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5nZ21ndHd3b3NydHdibWpwZXppIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDUxODUzMjEsImV4cCI6MjA2MDc2MTMyMX0.zdR-7PHgRB7l7NGrPh2XPj9x4pxgcHUKrDb-rqyFh24'
         }
       });
       

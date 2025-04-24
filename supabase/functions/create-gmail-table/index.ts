@@ -10,10 +10,13 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request with CORS headers')
     return new Response(null, { headers: corsHeaders })
   }
   
-  console.log('Create Gmail Table function called');
+  // Log request details to help with debugging
+  console.log('Create Gmail Table function called')
+  console.log('Request headers:', Object.fromEntries(req.headers.entries()))
   
   try {
     // Create a Supabase client

@@ -10,8 +10,13 @@ const corsHeaders = {
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request with CORS headers')
     return new Response(null, { headers: corsHeaders })
   }
+
+  // Log full request details for debugging
+  console.log('Gmail Callback function called')
+  console.log('Request headers:', Object.fromEntries(req.headers.entries()))
 
   try {
     const url = new URL(req.url)
