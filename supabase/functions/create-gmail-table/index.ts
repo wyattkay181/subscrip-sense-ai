@@ -67,9 +67,9 @@ serve(async (req) => {
       if (!tableExists) {
         console.log('Table does not exist, creating it now');
         
-        // Create the table
+        // Create the table with IF NOT EXISTS to avoid errors
         await connection.queryObject(`
-          CREATE TABLE public.gmail_tokens (
+          CREATE TABLE IF NOT EXISTS public.gmail_tokens (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             user_id UUID NOT NULL,
             access_token TEXT NOT NULL,
@@ -83,62 +83,72 @@ serve(async (req) => {
         `);
         
         console.log('Table created successfully');
-        
-        // Check for existing policies before creating them
-        const existingPolicies = await connection.queryObject(`
-          SELECT policyname FROM pg_policies 
-          WHERE tablename = 'gmail_tokens' AND schemaname = 'public';
-        `);
-        
-        if (existingPolicies.rows.length === 0) {
-          console.log('No policies exist, creating them now');
-          
+      } else {
+        console.log('Table already exists, skipping creation');
+      }
+      
+      // Always check for existing policies before creating them
+      const existingPolicies = await connection.queryObject(`
+        SELECT policyname FROM pg_policies 
+        WHERE tablename = 'gmail_tokens' AND schemaname = 'public';
+      `);
+      
+      console.log('Existing policies:', existingPolicies.rows.length ? existingPolicies.rows.map(r => r.policyname) : 'None');
+      
+      // Create required policies if they don't exist
+      const requiredPolicies = [
+        { 
+          name: "Users can view their own tokens", 
+          command: "SELECT", 
+          using: "auth.uid() = user_id" 
+        },
+        { 
+          name: "Users can insert their own tokens", 
+          command: "INSERT", 
+          check: "auth.uid() = user_id" 
+        },
+        { 
+          name: "Users can update their own tokens", 
+          command: "UPDATE", 
+          using: "auth.uid() = user_id" 
+        },
+        { 
+          name: "Users can delete their own tokens", 
+          command: "DELETE", 
+          using: "auth.uid() = user_id" 
+        }
+      ];
+      
+      const existingPolicyNames = existingPolicies.rows.map(row => row.policyname);
+      
+      // Create missing policies
+      for (const policy of requiredPolicies) {
+        if (!existingPolicyNames.includes(policy.name)) {
+          console.log(`Creating missing policy: ${policy.name}`);
           try {
-            // Create all policies in a single transaction for better error handling
-            await connection.queryObject('BEGIN;');
-            
-            await connection.queryObject(`
-              CREATE POLICY "Users can view their own tokens" 
-              ON public.gmail_tokens 
-              FOR SELECT 
-              USING (auth.uid() = user_id);
-              
-              CREATE POLICY "Users can insert their own tokens" 
-              ON public.gmail_tokens 
-              FOR INSERT 
-              WITH CHECK (auth.uid() = user_id);
-              
-              CREATE POLICY "Users can update their own tokens" 
-              ON public.gmail_tokens 
-              FOR UPDATE 
-              USING (auth.uid() = user_id);
-              
-              CREATE POLICY "Users can delete their own tokens" 
-              ON public.gmail_tokens 
-              FOR DELETE 
-              USING (auth.uid() = user_id);
-            `);
-            
-            await connection.queryObject('COMMIT;');
-            console.log('All policies created successfully');
+            if (policy.command === "INSERT") {
+              await connection.queryObject(`
+                CREATE POLICY "${policy.name}" 
+                ON public.gmail_tokens 
+                FOR ${policy.command} 
+                WITH CHECK (${policy.check});
+              `);
+            } else {
+              await connection.queryObject(`
+                CREATE POLICY "${policy.name}" 
+                ON public.gmail_tokens 
+                FOR ${policy.command} 
+                USING (${policy.using});
+              `);
+            }
+            console.log(`Successfully created policy: ${policy.name}`);
           } catch (policyError) {
-            console.error('Error creating policies:', policyError);
-            await connection.queryObject('ROLLBACK;');
-            // Continue execution - the table exists, which is the most important part
+            console.error(`Error creating policy ${policy.name}:`, policyError);
+            // Continue execution - we'll try to create other policies
           }
         } else {
-          console.log('Policies already exist:', existingPolicies.rows);
+          console.log(`Policy already exists: ${policy.name}`);
         }
-      } else {
-        console.log('Table already exists, checking policy configuration');
-        
-        // Check existing policies
-        const existingPolicies = await connection.queryObject(`
-          SELECT policyname FROM pg_policies 
-          WHERE tablename = 'gmail_tokens' AND schemaname = 'public';
-        `);
-        
-        console.log('Existing policies:', existingPolicies.rows);
       }
       
       // Verify the table structure
@@ -163,9 +173,9 @@ serve(async (req) => {
       await pool.end();
     }
 
-    console.log('Table created or verified successfully');
+    console.log('Table verified and policies checked successfully');
     return new Response(
-      JSON.stringify({ success: true, message: 'Table created or verified successfully' }),
+      JSON.stringify({ success: true, message: 'Table verified and policies checked successfully' }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200
