@@ -13,13 +13,15 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders })
   }
   
-  // Create a Supabase client
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-  )
-
+  console.log('Create Gmail Table function called');
+  
   try {
+    // Create a Supabase client
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
+
     console.log('Attempting to create gmail_tokens table via database function')
     
     // Create the table using the database function

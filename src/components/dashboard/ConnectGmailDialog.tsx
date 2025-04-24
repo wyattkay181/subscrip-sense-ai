@@ -51,23 +51,34 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
-      console.log('Invoking gmail-auth-url function');
+      console.log('Initiating OAuth flow with Gmail');
       
-      // Call the Supabase Edge Function to get the authorization URL
-      const { data, error } = await supabase.functions.invoke('gmail-auth-url');
+      // Important: Direct URL approach to avoid API key issues
+      const authUrl = new URL(`https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url`);
       
-      if (error) {
-        console.error('Error invoking function:', error);
-        setError(`Failed to start authentication: ${error.message}`);
+      const response = await fetch(authUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabase.auth.anon.key}`,
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Error response:', errorData);
+        setError(`Failed to start authentication: ${errorData.error || response.statusText}`);
         setIsLoading(false);
-        throw error;
+        return;
       }
       
+      const data = await response.json();
+      
       if (!data?.url) {
-        console.error('No URL returned from function:', data);
+        console.error('No URL returned:', data);
         setError('Failed to get authorization URL from server');
         setIsLoading(false);
-        throw new Error('Failed to get authorization URL');
+        return;
       }
       
       console.log('Redirecting to Google auth URL:', data.url);
@@ -82,6 +93,7 @@ const ConnectGmailDialog = () => {
         variant: "destructive",
       });
       setIsLoading(false);
+      setError(`Error: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
