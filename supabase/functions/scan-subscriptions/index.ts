@@ -1,6 +1,6 @@
 
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
-import { corsHeaders } from "../gmail-callback/utils.ts";
+import { corsHeaders, validateEnvironmentVariables } from "./utils.ts";
 
 console.log("Subscription scanner function loaded");
 
@@ -11,6 +11,8 @@ serve(async (req) => {
   }
 
   try {
+    validateEnvironmentVariables();
+
     const { user } = await getUser(req);
     if (!user) {
       throw new Error('Unauthorized');
