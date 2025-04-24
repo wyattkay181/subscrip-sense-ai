@@ -20,27 +20,27 @@ serve(async (req) => {
   console.log('Request headers:', Object.fromEntries(req.headers.entries()))
   
   try {
-    // Check for API key
-    const apiKey = req.headers.get('apikey') || req.headers.get('Authorization')?.split(' ')[1];
+    // Instead of using the client's API key, use the service role key from environment
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') || '';
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || '';
     
-    if (!apiKey) {
-      console.error('No API key found in request');
-      return new Response(
-        JSON.stringify({ error: 'No API key found in request', hint: 'No `apikey` request header or url param was found.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY environment variables');
+      throw new Error('Missing required Supabase environment variables');
     }
     
-    // Create a Supabase client
+    console.log('Creating Supabase client with service role key');
+    
+    // Create a Supabase client with the service role key
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') || '',
-      apiKey
+      supabaseUrl,
+      supabaseServiceKey
     );
 
     console.log('Attempting to create gmail_tokens table via database function')
     
     // Create the table using the database function
-    const { error } = await supabase.rpc('create_gmail_tokens_table');
+    const { data, error } = await supabase.rpc('create_gmail_tokens_table');
     
     if (error) {
       console.error('Error creating table:', error);

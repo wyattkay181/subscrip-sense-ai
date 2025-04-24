@@ -5,6 +5,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
 }
 
 serve(async (req) => {
@@ -47,17 +48,23 @@ serve(async (req) => {
     const clientId = Deno.env.get('GOOGLE_CLIENT_ID')
     const clientSecret = Deno.env.get('GOOGLE_CLIENT_SECRET')
     const redirectUri = Deno.env.get('GOOGLE_REDIRECT_URI')
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
 
     console.log('Environment variable check:')
     console.log('- GOOGLE_CLIENT_ID present:', !!clientId)
     console.log('- GOOGLE_CLIENT_SECRET present:', !!clientSecret) 
     console.log('- GOOGLE_REDIRECT_URI value:', redirectUri)
+    console.log('- SUPABASE_URL present:', !!supabaseUrl)
+    console.log('- SUPABASE_SERVICE_ROLE_KEY present:', !!supabaseServiceKey)
 
-    if (!clientId || !clientSecret || !redirectUri) {
+    if (!clientId || !clientSecret || !redirectUri || !supabaseUrl || !supabaseServiceKey) {
       console.error('Missing required environment variables', {
         hasClientId: !!clientId,
         hasClientSecret: !!clientSecret,
-        hasRedirectUri: !!redirectUri
+        hasRedirectUri: !!redirectUri,
+        hasSupabaseUrl: !!supabaseUrl,
+        hasSupabaseServiceKey: !!supabaseServiceKey
       })
       throw new Error('Missing required environment variables')
     }
@@ -88,10 +95,10 @@ serve(async (req) => {
 
     console.log('Successfully obtained tokens')
 
-    // Store tokens in Supabase
+    // Store tokens in Supabase using service role key
     const supabase = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+      supabaseUrl,
+      supabaseServiceKey
     )
 
     // Create a table to store tokens if it doesn't exist

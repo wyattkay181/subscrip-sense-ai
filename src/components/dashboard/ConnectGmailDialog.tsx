@@ -59,14 +59,20 @@ const ConnectGmailDialog = () => {
         }
       });
       
+      const responseData = await tableResponse.json();
+      
       if (!tableResponse.ok) {
-        const errorData = await tableResponse.json();
-        console.log('Table creation response:', errorData);
+        console.error('Table creation failed:', responseData);
+        setError(`Failed to create table: ${responseData.error || 'Unknown error'}`);
       } else {
-        console.log('Table creation successful');
+        console.log('Table creation successful:', responseData);
       }
+      
+      return tableResponse.ok;
     } catch (error) {
       console.error('Error creating Gmail table:', error);
+      setError(`Error creating Gmail table: ${error instanceof Error ? error.message : String(error)}`);
+      return false;
     }
   };
 
@@ -79,7 +85,8 @@ const ConnectGmailDialog = () => {
       console.log('Initiating OAuth flow with Gmail');
       
       // First create the table to ensure it exists
-      await createGmailTable();
+      const tableCreated = await createGmailTable();
+      console.log('Table creation result:', tableCreated);
       
       // Important: Direct URL approach to avoid API key issues
       const authUrl = new URL(`https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url`);
