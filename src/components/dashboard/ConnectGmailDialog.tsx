@@ -68,10 +68,15 @@ const ConnectGmailDialog = () => {
       setIsLoading(true);
       setError(null);
       
-      console.log('Starting OAuth flow with token:', session.access_token);
+      console.log('Starting OAuth flow with user ID:', user.id);
+      console.log('Current origin:', window.location.origin);
+      console.log('SUPABASE_PUBLISHABLE_KEY available:', !!SUPABASE_PUBLISHABLE_KEY);
+      
+      const functionUrl = 'https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url';
+      console.log('Calling function URL:', functionUrl);
       
       // Use the publishable key from the client file
-      const response = await fetch('https://nggmgtwwosrtwbmjpezi.supabase.co/functions/v1/gmail-auth-url', {
+      const response = await fetch(functionUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -80,15 +85,25 @@ const ConnectGmailDialog = () => {
         }
       });
       
+      console.log('Response status:', response.status);
+      
       if (!response.ok) {
-        const errorData = await response.json();
-        console.error('Error response from gmail-auth-url:', response.status, errorData);
+        const errorText = await response.text();
+        console.error('Error response from gmail-auth-url:', response.status, errorText);
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch (e) {
+          errorData = { error: errorText };
+        }
+        
         setError(`Failed to start authentication: ${errorData.error || response.statusText} (Status: ${response.status})`);
         setIsLoading(false);
         return;
       }
       
       const responseData = await response.json();
+      console.log('Response data received:', responseData);
       
       if (!responseData?.url) {
         console.error('No URL returned from gmail-auth-url:', responseData);

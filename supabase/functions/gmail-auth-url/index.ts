@@ -26,6 +26,11 @@ serve(async (req) => {
     // Check for API key as well (important for public functions)
     const apiKey = req.headers.get('apikey');
     console.log('API key present:', !!apiKey);
+    
+    if (!apiKey) {
+      console.error('Missing API key in request headers');
+      throw new Error('Missing API key in request');
+    }
 
     if (authHeader) {
       try {
