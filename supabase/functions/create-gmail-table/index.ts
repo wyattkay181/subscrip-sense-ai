@@ -90,7 +90,7 @@ serve(async (req) => {
         // Users can view their own tokens
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can view their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
             ON public.gmail_tokens 
             FOR SELECT 
             USING (auth.uid() = user_id);
@@ -103,7 +103,7 @@ serve(async (req) => {
         // Users can insert their own tokens
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can insert their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
             ON public.gmail_tokens 
             FOR INSERT 
             WITH CHECK (auth.uid() = user_id);
@@ -116,7 +116,7 @@ serve(async (req) => {
         // Users can update their own tokens
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can update their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
             ON public.gmail_tokens 
             FOR UPDATE 
             USING (auth.uid() = user_id);
@@ -129,7 +129,7 @@ serve(async (req) => {
         // Users can delete their own tokens
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can delete their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
             ON public.gmail_tokens 
             FOR DELETE 
             USING (auth.uid() = user_id);

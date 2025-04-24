@@ -203,60 +203,60 @@ serve(async (req) => {
         // Create RLS policies with correct syntax - fixing the issues
         console.log('Creating or updating RLS policies');
         
-        // Users can view their own tokens - FIXED SYNTAX ERROR
+        // Users can view their own tokens - MODIFIED to use IF NOT EXISTS
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can view their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can view their own tokens" 
             ON public.gmail_tokens 
             FOR SELECT 
             USING (auth.uid() = user_id);
           `);
-          console.log('SELECT policy created successfully');
+          console.log('SELECT policy created or already exists');
         } catch (policyError) {
-          console.error('Error creating SELECT policy:', policyError);
-          // Continue anyway since this might just mean the policy already exists
+          console.error('Error with SELECT policy:', policyError);
+          // Continue anyway since we've added IF NOT EXISTS
         }
         
-        // Users can insert their own tokens - FIXED SYNTAX ERROR
+        // Users can insert their own tokens - MODIFIED to use IF NOT EXISTS
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can insert their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can insert their own tokens" 
             ON public.gmail_tokens 
             FOR INSERT 
             WITH CHECK (auth.uid() = user_id);
           `);
-          console.log('INSERT policy created successfully');
+          console.log('INSERT policy created or already exists');
         } catch (policyError) {
-          console.error('Error creating INSERT policy:', policyError);
-          // Continue anyway since this might just mean the policy already exists
+          console.error('Error with INSERT policy:', policyError);
+          // Continue anyway since we've added IF NOT EXISTS
         }
         
-        // Users can update their own tokens - FIXED SYNTAX ERROR
+        // Users can update their own tokens - MODIFIED to use IF NOT EXISTS
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can update their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can update their own tokens" 
             ON public.gmail_tokens 
             FOR UPDATE 
             USING (auth.uid() = user_id);
           `);
-          console.log('UPDATE policy created successfully');
+          console.log('UPDATE policy created or already exists');
         } catch (policyError) {
-          console.error('Error creating UPDATE policy:', policyError);
-          // Continue anyway since this might just mean the policy already exists
+          console.error('Error with UPDATE policy:', policyError);
+          // Continue anyway since we've added IF NOT EXISTS
         }
         
-        // Users can delete their own tokens - FIXED SYNTAX ERROR
+        // Users can delete their own tokens - MODIFIED to use IF NOT EXISTS
         try {
           await connection.queryObject(`
-            CREATE POLICY "Users can delete their own tokens" 
+            CREATE POLICY IF NOT EXISTS "Users can delete their own tokens" 
             ON public.gmail_tokens 
             FOR DELETE 
             USING (auth.uid() = user_id);
           `);
-          console.log('DELETE policy created successfully');
+          console.log('DELETE policy created or already exists');
         } catch (policyError) {
-          console.error('Error creating DELETE policy:', policyError);
-          // Continue anyway since this might just mean the policy already exists
+          console.error('Error with DELETE policy:', policyError);
+          // Continue anyway since we've added IF NOT EXISTS
         }
         
         console.log('Policies created or updated successfully');
