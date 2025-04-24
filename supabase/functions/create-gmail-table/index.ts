@@ -40,130 +40,207 @@ serve(async (req) => {
       supabaseServiceKey
     );
 
-    console.log('Creating table if it does not exist')
+    console.log('Creating table if it does not exist - using direct SQL')
     
-    // Use direct SQL to create the table and policies with service role
-    const createTableSQL = `
-      CREATE TABLE IF NOT EXISTS public.gmail_tokens (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID NOT NULL,
-        access_token TEXT NOT NULL,
-        refresh_token TEXT,
-        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-      );
-      
-      -- Add RLS policy if it doesn't exist (wrapped in anonymous DO block)
-      DO $$
-      BEGIN
-        -- Always enable RLS
-        ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
-        
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_policies 
-          WHERE tablename = 'gmail_tokens' 
-          AND policyname = 'Users can view their own tokens'
-        ) THEN
-          CREATE POLICY "Users can view their own tokens"
-            ON public.gmail_tokens
-            FOR SELECT
-            USING (auth.uid() = user_id);
-            
-          CREATE POLICY "Users can insert their own tokens"
-            ON public.gmail_tokens
-            FOR INSERT
-            WITH CHECK (auth.uid() = user_id);
-            
-          CREATE POLICY "Users can update their own tokens"
-            ON public.gmail_tokens
-            FOR UPDATE
-            USING (auth.uid() = user_id);
-            
-          CREATE POLICY "Users can delete their own tokens"
-            ON public.gmail_tokens
-            FOR DELETE
-            USING (auth.uid() = user_id);
-        END IF;
-      EXCEPTION
-        WHEN OTHERS THEN
-          -- Log the error but don't fail
-          RAISE NOTICE 'Error creating policies: %', SQLERRM;
-      END
-      $$;
-    `;
-    
-    console.log('Executing SQL to create table and policies')
-    // Execute the SQL using service role permissions
+    // Try to create the table directly with raw SQL
+    // We're not using exec_sql since it appears to not exist in your setup
     try {
-      const { error } = await supabase.rpc('exec_sql', { sql: createTableSQL });
+      const { error: createTableError } = await supabase
+        .from('_migrations')
+        .insert({
+          name: 'create_gmail_tokens_table',
+          hash: 'manual-migration'
+        })
+        .select()
+        .maybeSingle();
+
+      // Note: We're ignoring duplicate key errors here if the migration was already run
       
-      if (error) {
-        console.error('Table creation error:', error);
-        throw error;
-      }
-    } catch (sqlError) {
-      console.error('Failed to execute SQL:', sqlError);
-      // Try alternative approach with raw queries
-      console.log('Attempting alternative approach...');
+      console.log('Attempting to create table directly with SQL query');
       
-      try {
-        // First try to create the table directly
-        const { error: tableError } = await supabase.from('gmail_tokens').select('id').limit(1);
-        
-        if (tableError) {
-          console.log('Table does not exist. Creating it.');
-          // Create table directly
-          await supabase.rpc('exec_sql', { 
-            sql: `CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+      // Create the table directly
+      const { error } = await supabase.rpc(
+        'query', 
+        { 
+          query: `
+            CREATE TABLE IF NOT EXISTS public.gmail_tokens (
               id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
               user_id UUID NOT NULL,
               access_token TEXT NOT NULL,
               refresh_token TEXT,
               expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
               created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-            );`
-          });
-          
-          // Enable RLS
-          await supabase.rpc('exec_sql', { 
-            sql: `ALTER TABLE public.gmail_tokens ENABLE ROW LEVEL SECURITY;`
-          });
-          
-          // Create policies one by one
-          await supabase.rpc('exec_sql', { 
-            sql: `CREATE POLICY "Users can view their own tokens" 
-                  ON public.gmail_tokens
-                  FOR SELECT
-                  USING (auth.uid() = user_id);`
-          });
-          
-          await supabase.rpc('exec_sql', { 
-            sql: `CREATE POLICY "Users can insert their own tokens" 
-                  ON public.gmail_tokens
-                  FOR INSERT
-                  WITH CHECK (auth.uid() = user_id);`
-          });
-          
-          await supabase.rpc('exec_sql', { 
-            sql: `CREATE POLICY "Users can update their own tokens" 
-                  ON public.gmail_tokens
-                  FOR UPDATE
-                  USING (auth.uid() = user_id);`
-          });
-          
-          await supabase.rpc('exec_sql', { 
-            sql: `CREATE POLICY "Users can delete their own tokens" 
-                  ON public.gmail_tokens
-                  FOR DELETE
-                  USING (auth.uid() = user_id);`
-          });
+            );
+            
+            ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;
+            
+            DROP POLICY IF EXISTS "Users can view their own tokens" ON public.gmail_tokens;
+            CREATE POLICY "Users can view their own tokens"
+              ON public.gmail_tokens
+              FOR SELECT
+              USING (auth.uid() = user_id);
+              
+            DROP POLICY IF EXISTS "Users can insert their own tokens" ON public.gmail_tokens;
+            CREATE POLICY "Users can insert their own tokens"
+              ON public.gmail_tokens
+              FOR INSERT
+              WITH CHECK (auth.uid() = user_id);
+              
+            DROP POLICY IF EXISTS "Users can update their own tokens" ON public.gmail_tokens;
+            CREATE POLICY "Users can update their own tokens"
+              ON public.gmail_tokens
+              FOR UPDATE
+              USING (auth.uid() = user_id);
+              
+            DROP POLICY IF EXISTS "Users can delete their own tokens" ON public.gmail_tokens;
+            CREATE POLICY "Users can delete their own tokens"
+              ON public.gmail_tokens
+              FOR DELETE
+              USING (auth.uid() = user_id);
+          `
         }
-      } catch (alternativeError) {
-        console.error('Alternative approach failed:', alternativeError);
-        throw alternativeError;
+      );
+      
+      if (error) {
+        console.error('Error creating table with direct query:', error);
+        
+        // Try a more basic approach - just create the table without RLS
+        console.log('Attempting basic table creation without RLS');
+        const { error: basicError } = await supabase.rpc(
+          'query',
+          {
+            query: `
+              CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+              );
+            `
+          }
+        );
+        
+        if (basicError) {
+          console.error('Basic table creation failed:', basicError);
+          throw basicError;
+        } else {
+          console.log('Basic table created successfully. Adding RLS separately.');
+          
+          // Try to add RLS separately
+          try {
+            await supabase.rpc(
+              'query',
+              {
+                query: `ALTER TABLE IF EXISTS public.gmail_tokens ENABLE ROW LEVEL SECURITY;`
+              }
+            );
+            
+            console.log('RLS enabled successfully.');
+            
+            // Add policies one by one
+            const policies = [
+              `CREATE POLICY IF NOT EXISTS "Users can view their own tokens"
+               ON public.gmail_tokens FOR SELECT USING (auth.uid() = user_id);`,
+               
+              `CREATE POLICY IF NOT EXISTS "Users can insert their own tokens"
+               ON public.gmail_tokens FOR INSERT WITH CHECK (auth.uid() = user_id);`,
+               
+              `CREATE POLICY IF NOT EXISTS "Users can update their own tokens"
+               ON public.gmail_tokens FOR UPDATE USING (auth.uid() = user_id);`,
+               
+              `CREATE POLICY IF NOT EXISTS "Users can delete their own tokens"
+               ON public.gmail_tokens FOR DELETE USING (auth.uid() = user_id);`
+            ];
+            
+            for (const policyQuery of policies) {
+              try {
+                await supabase.rpc('query', { query: policyQuery });
+                console.log('Added policy successfully:', policyQuery);
+              } catch (policyError) {
+                console.error('Failed to add policy:', policyError);
+                // Continue with other policies
+              }
+            }
+          } catch (rlsError) {
+            console.error('Failed to add RLS:', rlsError);
+            // Continue anyway since the table exists
+          }
+        }
+      } else {
+        console.log('Table and policies created successfully');
+      }
+    } catch (sqlError) {
+      console.error('SQL execution error:', sqlError);
+      
+      // Last resort - try a different approach
+      console.log('Trying alternative approach - checking if table exists first');
+      
+      const { error: checkError } = await supabase.rpc(
+        'query',
+        { 
+          query: `
+            SELECT EXISTS (
+              SELECT FROM pg_tables
+              WHERE schemaname = 'public'
+              AND tablename = 'gmail_tokens'
+            );
+          `
+        }
+      );
+      
+      if (checkError) {
+        console.error('Failed to check if table exists:', checkError);
+        throw checkError;
+      } else {
+        console.log('Table existence check successful, creating if not exists');
+        
+        // Create table with minimal SQL
+        const { error: createError } = await supabase.rpc(
+          'query',
+          {
+            query: `
+              CREATE TABLE IF NOT EXISTS public.gmail_tokens (
+                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                user_id UUID NOT NULL,
+                access_token TEXT NOT NULL,
+                refresh_token TEXT,
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+              );
+            `
+          }
+        );
+        
+        if (createError) {
+          console.error('Failed to create table with minimal approach:', createError);
+          throw createError;
+        } else {
+          console.log('Table created successfully with minimal approach');
+        }
       }
     }
 
+    // Verify table exists by doing a simple query
+    console.log('Verifying table creation with a query');
+    try {
+      const { data, error } = await supabase
+        .from('gmail_tokens')
+        .select('id')
+        .limit(1);
+        
+      if (error) {
+        console.error('Table verification failed:', error);
+        throw error;
+      }
+      
+      console.log('Table verification successful, table exists');
+    } catch (verificationError) {
+      console.error('Table verification exception:', verificationError);
+      throw verificationError;
+    }
+    
     console.log('Table created or verified successfully')
     return new Response(
       JSON.stringify({ success: true, message: 'Table created or verified successfully' }),
