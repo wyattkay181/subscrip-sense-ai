@@ -1,17 +1,9 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Calendar, ChartPie, ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown } from 'lucide-react';
 
 const subscriptions = [
   { 
@@ -176,10 +168,6 @@ const SubscriptionList = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="h-9 md:w-[300px]"
             />
-            <Button variant="outline" size="sm" className="h-9">
-              <Calendar size={16} className="mr-1" />
-              <span className="hidden md:inline">Filter by Date</span>
-            </Button>
           </div>
         </div>
       </CardHeader>
@@ -225,7 +213,6 @@ const SubscriptionList = () => {
                   </div>
                 </TableHead>
                 <TableHead className="text-right">Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -237,20 +224,6 @@ const SubscriptionList = () => {
                   <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
                   <TableCell className="text-right">
                     {getStatusBadge(subscription.status)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          Actions
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>View Details</DropdownMenuItem>
-                        <DropdownMenuItem>Edit</DropdownMenuItem>
-                        <DropdownMenuItem>Cancel</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
               ))}
