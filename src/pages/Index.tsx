@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import AppLayout from '@/components/layout/AppLayout';
 import DashboardStats from '@/components/dashboard/DashboardStats';
@@ -8,9 +9,7 @@ import SubscriptionList from '@/components/dashboard/SubscriptionList';
 import OptimizationSuggestions from '@/components/dashboard/OptimizationSuggestions';
 import SubscriptionFormDialog from '@/components/dashboard/SubscriptionFormDialog';
 import AIAssistant from '@/components/dashboard/AIAssistant';
-import ConnectGmailDialog from '@/components/dashboard/ConnectGmailDialog';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const Index = () => {
@@ -24,7 +23,6 @@ const Index = () => {
           <p className="text-muted-foreground">Track and optimize your recurring payments</p>
         </div>
         <div className="flex gap-2">
-          <ConnectGmailDialog />
           <Button 
             variant="outline" 
             className="hidden md:flex" 
