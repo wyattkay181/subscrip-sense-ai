@@ -19,8 +19,7 @@ import {
   Calendar, 
   ChartPie, 
   Bell, 
-  Plus, 
-  Users 
+  Plus 
 } from 'lucide-react';
 
 const AppSidebar = () => {
@@ -65,10 +64,7 @@ const AppSidebar = () => {
       </SidebarContent>
       
       <SidebarFooter className="py-4">
-        <div className="px-4 py-2 mx-3 rounded-lg bg-sidebar-accent flex items-center gap-2">
-          <Users size={16} />
-          <span className="text-sm">Support</span>
-        </div>
+        {/* Support CTA removed */}
       </SidebarFooter>
     </Sidebar>
   );
