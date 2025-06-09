@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 const suggestions = [
@@ -11,7 +10,6 @@ const suggestions = [
     title: 'Potential Duplicate Services',
     description: 'You have both Spotify ($9.99) and Apple Music ($9.99). Consider canceling one of them.',
     savingsAmount: 9.99,
-    action: 'Compare & Choose'
   },
   {
     id: 2,
@@ -19,7 +17,6 @@ const suggestions = [
     title: 'Downgrade Opportunity',
     description: 'Netflix Premium ($19.99) can be downgraded to Standard ($15.49) based on your usage patterns.',
     savingsAmount: 4.50,
-    action: 'Downgrade Plan'
   },
   {
     id: 3,
@@ -27,7 +24,6 @@ const suggestions = [
     title: 'Unused Subscription',
     description: 'Adobe Creative Cloud ($29.99) hasn\'t been used in the last 45 days.',
     savingsAmount: 29.99,
-    action: 'Cancel Service'
   },
 ];
 
@@ -59,10 +55,7 @@ const OptimizationSuggestions = () => {
                   </div>
                   <h3 className="font-medium text-base mb-2">{suggestion.title}</h3>
                   <p className="text-sm text-muted-foreground mb-3 flex-grow">{suggestion.description}</p>
-                  <div className="flex justify-between items-center mt-2">
-                    <div className="text-subscription-green font-medium">Save ${suggestion.savingsAmount}/mo</div>
-                    <Button variant="outline" size="sm">{suggestion.action}</Button>
-                  </div>
+                  <div className="text-subscription-green font-medium">Save ${suggestion.savingsAmount}/mo</div>
                 </div>
               </CardContent>
             </Card>
