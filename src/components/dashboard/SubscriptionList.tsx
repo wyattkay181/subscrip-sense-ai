@@ -1,101 +1,47 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
 
-const subscriptions = [
-  { 
-    id: 1, 
-    name: 'Netflix', 
-    category: 'Streaming', 
-    price: 15.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-15', 
-    status: 'active' 
-  },
-  { 
-    id: 2, 
-    name: 'Spotify', 
-    category: 'Music', 
-    price: 9.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-02', 
-    status: 'active' 
-  },
-  { 
-    id: 3, 
-    name: 'Adobe Creative Cloud', 
-    category: 'Productivity', 
-    price: 29.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-10', 
-    status: 'active' 
-  },
-  { 
-    id: 4, 
-    name: 'Disney+', 
-    category: 'Streaming', 
-    price: 7.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-24', 
-    status: 'active' 
-  },
-  { 
-    id: 5, 
-    name: 'HBO Max', 
-    category: 'Streaming', 
-    price: 14.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-08', 
-    status: 'active' 
-  },
-  { 
-    id: 6, 
-    name: 'Amazon Prime', 
-    category: 'Streaming', 
-    price: 14.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-21', 
-    status: 'active' 
-  },
-  { 
-    id: 7, 
-    name: 'Notion', 
-    category: 'Productivity', 
-    price: 8.00, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-12', 
-    status: 'trial-ending' 
-  },
-  { 
-    id: 8, 
-    name: 'Dropbox', 
-    category: 'Storage', 
-    price: 9.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-14', 
-    status: 'active' 
-  },
-  { 
-    id: 9, 
-    name: 'Microsoft 365', 
-    category: 'Productivity', 
-    price: 6.99, 
-    billingCycle: 'Monthly', 
-    nextRenewal: '2025-05-25', 
-    status: 'renewal-soon' 
-  },
-];
+interface Subscription {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  billingCycle: string;
+  nextRenewal: string;
+  status: string;
+}
 
 type SortKey = 'name' | 'category' | 'price' | 'nextRenewal';
 type SortDirection = 'asc' | 'desc';
 
 const SubscriptionList = () => {
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('nextRenewal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+
+  // Load subscriptions from localStorage on component mount
+  useEffect(() => {
+    const savedSubscriptions = localStorage.getItem('subscriptions');
+    if (savedSubscriptions) {
+      setSubscriptions(JSON.parse(savedSubscriptions));
+    }
+  }, []);
+
+  // Save subscriptions to localStorage whenever subscriptions change
+  useEffect(() => {
+    localStorage.setItem('subscriptions', JSON.stringify(subscriptions));
+  }, [subscriptions]);
+
+  const handleDelete = (id: string) => {
+    setSubscriptions(prev => prev.filter(sub => sub.id !== id));
+  };
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -172,64 +118,82 @@ const SubscriptionList = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead 
-                  className="cursor-pointer hover:text-primary transition-colors"
-                  onClick={() => handleSort('name')}
-                >
-                  <div className="flex items-center">
-                    Name
-                    <SortIndicator currentKey="name" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:text-primary transition-colors"
-                  onClick={() => handleSort('category')}
-                >
-                  <div className="flex items-center">
-                    Category
-                    <SortIndicator currentKey="category" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:text-primary transition-colors text-right"
-                  onClick={() => handleSort('price')}
-                >
-                  <div className="flex items-center justify-end">
-                    Monthly Price
-                    <SortIndicator currentKey="price" />
-                  </div>
-                </TableHead>
-                <TableHead 
-                  className="cursor-pointer hover:text-primary transition-colors text-right"
-                  onClick={() => handleSort('nextRenewal')}
-                >
-                  <div className="flex items-center justify-end">
-                    Next Renewal
-                    <SortIndicator currentKey="nextRenewal" />
-                  </div>
-                </TableHead>
-                <TableHead className="text-right">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sortedAndFilteredSubscriptions.map((subscription) => (
-                <TableRow key={subscription.id}>
-                  <TableCell className="font-medium">{subscription.name}</TableCell>
-                  <TableCell>{subscription.category}</TableCell>
-                  <TableCell className="text-right">${subscription.price.toFixed(2)}</TableCell>
-                  <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
-                  <TableCell className="text-right">
-                    {getStatusBadge(subscription.status)}
-                  </TableCell>
+        {subscriptions.length === 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No subscriptions added yet.</p>
+            <p className="text-sm mt-2">Click "Add Subscription" to get started!</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead 
+                    className="cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => handleSort('name')}
+                  >
+                    <div className="flex items-center">
+                      Name
+                      <SortIndicator currentKey="name" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:text-primary transition-colors"
+                    onClick={() => handleSort('category')}
+                  >
+                    <div className="flex items-center">
+                      Category
+                      <SortIndicator currentKey="category" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:text-primary transition-colors text-right"
+                    onClick={() => handleSort('price')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Monthly Price
+                      <SortIndicator currentKey="price" />
+                    </div>
+                  </TableHead>
+                  <TableHead 
+                    className="cursor-pointer hover:text-primary transition-colors text-right"
+                    onClick={() => handleSort('nextRenewal')}
+                  >
+                    <div className="flex items-center justify-end">
+                      Next Renewal
+                      <SortIndicator currentKey="nextRenewal" />
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-right">Status</TableHead>
+                  <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {sortedAndFilteredSubscriptions.map((subscription) => (
+                  <TableRow key={subscription.id}>
+                    <TableCell className="font-medium">{subscription.name}</TableCell>
+                    <TableCell>{subscription.category}</TableCell>
+                    <TableCell className="text-right">${subscription.price.toFixed(2)}</TableCell>
+                    <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
+                    <TableCell className="text-right">
+                      {getStatusBadge(subscription.status)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDelete(subscription.id)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 size={16} />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

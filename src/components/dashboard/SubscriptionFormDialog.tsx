@@ -1,23 +1,32 @@
 
-import React from 'react';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import SubscriptionForm from './SubscriptionForm';
 
 const SubscriptionFormDialog = () => {
-  const [open, setOpen] = React.useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleSubscriptionAdded = () => {
+    setIsOpen(false);
+    // Dispatch custom event to notify other components about the update
+    window.dispatchEvent(new Event('subscriptionsUpdated'));
+  };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button className="gap-2">
-          <Plus size={16} />
+        <Button>
+          <Plus className="mr-2 h-4 w-4" />
           Add Subscription
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">
-        <SubscriptionForm onCancel={() => setOpen(false)} />
+        <DialogHeader>
+          <DialogTitle>Add New Subscription</DialogTitle>
+        </DialogHeader>
+        <SubscriptionForm onSuccess={handleSubscriptionAdded} />
       </DialogContent>
     </Dialog>
   );

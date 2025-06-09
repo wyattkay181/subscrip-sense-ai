@@ -1,8 +1,9 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface Message {
   text: string;
@@ -11,35 +12,44 @@ interface Message {
 
 const predefinedResponses: Record<string, string> = {
   "What subscriptions are costing me the most?": 
-    "Your most expensive subscriptions are: 1. Adobe Creative Cloud ($29.99), 2. Netflix ($15.99), and 3. Amazon Prime ($14.99). These three services account for 46% of your monthly subscription spending.",
+    "Based on your current subscriptions, I can help you identify your most expensive services once you add some subscriptions to track.",
     
-  "What can I cancel to save $50/month?": 
-    "To save $50/month, you could cancel: 1. Adobe Creative Cloud ($29.99) and 2. HBO Max ($14.99). This would save you $44.98/month. Adding Spotify ($9.99) would bring your savings to $54.97/month.",
+  "What can I cancel to save money?": 
+    "Once you add your subscriptions, I can analyze your spending patterns and suggest which services you might consider canceling to save money.",
     
-  "When is my Netflix renewal?": 
-    "Your Netflix subscription renews on May 15, 2025. You're currently on the Premium plan ($15.99/month).",
+  "When do my subscriptions renew?": 
+    "I can help you track renewal dates for all your subscriptions once you start adding them to your dashboard.",
     
-  "How much am I spending on streaming?": 
-    "You're currently spending $58.97/month on streaming services (Netflix, Disney+, HBO Max, Amazon Prime). This represents 44.5% of your total subscription spending.",
+  "How much am I spending total?": 
+    "Add your subscriptions to get a complete overview of your monthly and yearly spending across all services.",
     
   "What subscriptions should I consolidate?": 
-    "I recommend consolidating your music subscriptions. You're currently paying for both Spotify ($9.99) and Apple Music ($9.99). Consider keeping just one of these services to save $9.99/month."
+    "I can identify overlapping services and suggest consolidation opportunities once you have subscriptions tracked in your dashboard."
 };
 
 const predefinedQueries = [
   "What subscriptions are costing me the most?",
-  "What can I cancel to save $50/month?",
-  "When is my Netflix renewal?",
-  "How much am I spending on streaming?",
+  "What can I cancel to save money?", 
+  "When do my subscriptions renew?",
+  "How much am I spending total?",
   "What subscriptions should I consolidate?"
 ];
 
 const AIAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([
-    { text: "Hi there! I'm your SubscripSense AI assistant. How can I help you with your subscriptions today?", isUser: false }
+    { text: "Hi there! I'm your SubscripSense AI assistant. Add some subscriptions to your dashboard and I can help you analyze your spending patterns and find savings opportunities!", isUser: false }
   ]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const handleSendMessage = (text = input) => {
     if (!text.trim()) return;
@@ -52,47 +62,50 @@ const AIAssistant = () => {
     // Simulate AI response
     setTimeout(() => {
       const response = predefinedResponses[text] || 
-        "I'm still learning about your subscription patterns. Could you try asking me something else about your subscriptions?";
+        "I'm here to help you manage your subscriptions! Try adding some subscriptions first, then ask me about your spending patterns, renewal dates, or savings opportunities.";
       setMessages(prev => [...prev, { text: response, isUser: false }]);
       setIsTyping(false);
     }, 1000);
   };
 
   return (
-    <Card className="flex flex-col h-[400px]">
+    <Card className="flex flex-col h-[600px]">
       <CardHeader className="px-4 py-3 border-b">
         <CardTitle className="text-lg font-medium">AI Assistant</CardTitle>
       </CardHeader>
-      <CardContent className="p-4 flex-1 overflow-y-auto flex flex-col">
-        <div className="flex-1 overflow-y-auto mb-4">
-          {messages.map((message, index) => (
-            <div 
-              key={index}
-              className={`mb-3 ${message.isUser ? "ml-auto" : "mr-auto"} max-w-[80%]`}
-            >
+      <CardContent className="p-4 flex-1 overflow-hidden flex flex-col">
+        <ScrollArea className="flex-1 pr-4 mb-4">
+          <div className="space-y-3">
+            {messages.map((message, index) => (
               <div 
-                className={`p-3 rounded-lg ${
-                  message.isUser 
-                    ? "bg-subscription-purple text-white rounded-tr-none" 
-                    : "bg-accent text-foreground rounded-tl-none"
-                }`}
+                key={index}
+                className={`${message.isUser ? "ml-auto" : "mr-auto"} max-w-[80%]`}
               >
-                <p className="text-sm">{message.text}</p>
-              </div>
-            </div>
-          ))}
-          {isTyping && (
-            <div className="mr-auto max-w-[80%]">
-              <div className="p-3 rounded-lg bg-accent text-foreground rounded-tl-none">
-                <div className="flex space-x-1 items-center">
-                  <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse"></div>
-                  <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse" style={{ animationDelay: '0.2s' }}></div>
-                  <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                <div 
+                  className={`p-3 rounded-lg ${
+                    message.isUser 
+                      ? "bg-subscription-purple text-white rounded-tr-none" 
+                      : "bg-accent text-foreground rounded-tl-none"
+                  }`}
+                >
+                  <p className="text-sm">{message.text}</p>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
+            ))}
+            {isTyping && (
+              <div className="mr-auto max-w-[80%]">
+                <div className="p-3 rounded-lg bg-accent text-foreground rounded-tl-none">
+                  <div className="flex space-x-1 items-center">
+                    <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse"></div>
+                    <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                    <div className="w-2 h-2 rounded-full bg-subscription-purple animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+        </ScrollArea>
         
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2">
