@@ -1,69 +1,125 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const data = [
-  { month: 'Jan', amount: 89.96 },
-  { month: 'Feb', amount: 89.96 },
-  { month: 'Mar', amount: 99.95 },
-  { month: 'Apr', amount: 99.95 },
-  { month: 'May', amount: 119.46 },
-  { month: 'Jun', amount: 119.46 },
-  { month: 'Jul', amount: 132.45 },
-  { month: 'Aug', amount: 132.45 },
-];
+interface Subscription {
+  id: string;
+  name: string;
+  category: string;
+  price: number;
+  billingCycle: string;
+  nextRenewal: string;
+  status: string;
+}
 
 const SpendingTrend = () => {
+  const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+
+  useEffect(() => {
+    const savedSubscriptions = localStorage.getItem('subscriptions');
+    if (savedSubscriptions) {
+      setSubscriptions(JSON.parse(savedSubscriptions));
+    }
+  }, []);
+
+  // Listen for subscription updates
+  useEffect(() => {
+    const handleSubscriptionUpdate = () => {
+      const savedSubscriptions = localStorage.getItem('subscriptions');
+      if (savedSubscriptions) {
+        setSubscriptions(JSON.parse(savedSubscriptions));
+      } else {
+        setSubscriptions([]);
+      }
+    };
+
+    window.addEventListener('subscriptionsUpdated', handleSubscriptionUpdate);
+    window.addEventListener('storage', handleSubscriptionUpdate);
+
+    return () => {
+      window.removeEventListener('subscriptionsUpdated', handleSubscriptionUpdate);
+      window.removeEventListener('storage', handleSubscriptionUpdate);
+    };
+  }, []);
+
+  // Generate spending trend data based on actual subscriptions
+  const generateTrendData = () => {
+    if (subscriptions.length === 0) {
+      return [];
+    }
+
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+    const currentTotal = subscriptions.reduce((sum, sub) => sum + sub.price, 0);
+    
+    // For demo purposes, show a trend leading up to current spending
+    // In a real app, this would come from historical data
+    return months.map((month, index) => ({
+      month,
+      amount: Math.max(0, currentTotal - (months.length - 1 - index) * (currentTotal * 0.1))
+    }));
+  };
+
+  const trendData = generateTrendData();
+
+  if (subscriptions.length === 0) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg font-medium">Spending Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No data to display</p>
+            <p className="text-sm mt-2">Add subscriptions to see spending trends</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="h-full">
-      <CardHeader className="pb-2">
+    <Card>
+      <CardHeader>
         <CardTitle className="text-lg font-medium">Spending Trend</CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="h-[220px] w-full">
+        <div className="h-[200px]">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart
-              data={data}
-              margin={{
-                top: 10,
-                right: 10,
-                left: 0,
-                bottom: 0,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-              <XAxis dataKey="month" tickLine={false} axisLine={false} />
-              <YAxis
+            <LineChart data={trendData}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="month" 
+                tick={{ fontSize: 12 }}
+                tickLine={{ stroke: '#e2e8f0' }}
+              />
+              <YAxis 
+                tick={{ fontSize: 12 }}
+                tickLine={{ stroke: '#e2e8f0' }}
                 tickFormatter={(value) => `$${value}`}
-                tickLine={false}
-                axisLine={false}
-                domain={['dataMin - 10', 'dataMax + 10']}
               />
               <Tooltip 
-                formatter={(value) => [`$${value}`, 'Monthly Spend']}
+                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Monthly Spending']}
+                labelStyle={{ color: '#374151' }}
                 contentStyle={{ 
-                  borderRadius: '8px', 
+                  backgroundColor: '#fff', 
                   border: '1px solid #e2e8f0',
-                  boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
-                }} 
+                  borderRadius: '6px'
+                }}
               />
-              <defs>
-                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="amount"
-                stroke="#8B5CF6"
+              <Line 
+                type="monotone" 
+                dataKey="amount" 
+                stroke="#8884d8" 
                 strokeWidth={2}
-                fillOpacity={1}
-                fill="url(#colorAmount)"
+                dot={{ fill: '#8884d8', strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6, stroke: '#8884d8', strokeWidth: 2 }}
               />
-            </AreaChart>
+            </LineChart>
           </ResponsiveContainer>
+        </div>
+        <div className="mt-4 text-sm text-muted-foreground">
+          <p>Current monthly total: ${subscriptions.reduce((sum, sub) => sum + sub.price, 0).toFixed(2)}</p>
         </div>
       </CardContent>
     </Card>

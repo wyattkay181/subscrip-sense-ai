@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import CategoryBreakdown from '@/components/dashboard/CategoryBreakdown';
 import SpendingTrend from '@/components/dashboard/SpendingTrend';
-import UsageInsights from '@/components/dashboard/UsageInsights';
 import SubscriptionList from '@/components/dashboard/SubscriptionList';
 import OptimizationSuggestions from '@/components/dashboard/OptimizationSuggestions';
 import SubscriptionFormDialog from '@/components/dashboard/SubscriptionFormDialog';
@@ -37,8 +36,7 @@ const Index = () => {
         <div className="space-y-6">
           <DashboardStats />
           
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <UsageInsights />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <CategoryBreakdown />
             <SpendingTrend />
           </div>
