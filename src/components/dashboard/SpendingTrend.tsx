@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { Calendar, BarChart4, ArrowDownUp } from 'lucide-react';
+import { Calendar, ArrowDownUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface Subscription {
@@ -19,7 +19,7 @@ interface Subscription {
 
 const SpendingTrend = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
-  const [activeTab, setActiveTab] = useState('monthly-yearly');
+  const [activeTab, setActiveTab] = useState('renewals');
 
   useEffect(() => {
     const savedSubscriptions = localStorage.getItem('subscriptions');
@@ -54,19 +54,6 @@ const SpendingTrend = () => {
       month: 'short', 
       day: 'numeric' 
     }).format(date);
-  };
-
-  // Monthly vs Yearly Cost Comparison
-  const getMonthlyVsYearlyData = () => {
-    // Sort subscriptions by yearly cost (highest to lowest)
-    return [...subscriptions]
-      .sort((a, b) => (b.price * 12) - (a.price * 12))
-      .slice(0, 5) // Limit to top 5 for better visualization
-      .map(sub => ({
-        name: sub.name,
-        monthly: sub.price,
-        yearly: sub.price * 12,
-      }));
   };
 
   // Renewal Timeline
@@ -124,11 +111,6 @@ const SpendingTrend = () => {
       <CardContent>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="mb-4">
-            <TabsTrigger value="monthly-yearly" className="flex items-center gap-1.5">
-              <BarChart4 className="h-4 w-4" />
-              <span className="hidden sm:inline">Monthly vs Yearly</span>
-              <span className="sm:hidden">Costs</span>
-            </TabsTrigger>
             <TabsTrigger value="renewals" className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
               <span className="hidden sm:inline">Renewal Timeline</span>
@@ -140,53 +122,6 @@ const SpendingTrend = () => {
               <span className="sm:hidden">Ranking</span>
             </TabsTrigger>
           </TabsList>
-
-          <TabsContent value="monthly-yearly">
-            <div className="h-[250px]">
-              {getMonthlyVsYearlyData().length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={getMonthlyVsYearlyData()}
-                    margin={{ top: 10, right: 10, left: 10, bottom: 30 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis 
-                      dataKey="name" 
-                      angle={-45} 
-                      textAnchor="end" 
-                      height={70}
-                      interval={0}
-                      tick={{ fontSize: 12 }}
-                      tickMargin={5}
-                      tickLine={{ stroke: '#e2e8f0' }}
-                    />
-                    <YAxis
-                      tickFormatter={(value) => `$${value}`}
-                      tick={{ fontSize: 12 }}
-                      tickLine={{ stroke: '#e2e8f0' }}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => [`$${value.toFixed(2)}`, '']}
-                      contentStyle={{
-                        backgroundColor: '#fff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '6px'
-                      }}
-                    />
-                    <Bar name="Monthly Cost" dataKey="monthly" fill="#8884d8" radius={[4, 4, 0, 0]} />
-                    <Bar name="Yearly Cost" dataKey="yearly" fill="#82ca9d" radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="flex h-full items-center justify-center text-muted-foreground">
-                  No subscription data available
-                </div>
-              )}
-            </div>
-            <div className="mt-4 text-sm text-muted-foreground">
-              <p>Monthly cost vs. yearly impact (top 5 subscriptions)</p>
-            </div>
-          </TabsContent>
 
           <TabsContent value="renewals">
             <div className="h-[250px]">
