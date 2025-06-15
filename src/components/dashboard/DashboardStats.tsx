@@ -76,24 +76,20 @@ const DashboardStats = () => {
       title: "Monthly Total",
       value: `$${totalMonthly.toFixed(2)}`,
       description: `$${totalYearly.toFixed(2)} annually`,
-      icon: DollarSign,
-      trend: subscriptions.length > 0 ? "tracking" : "start adding subscriptions"
+      icon: DollarSign
     },
     {
       title: "Active Services",
       value: activeSubscriptions.toString(),
       description: `${subscriptions.length} total subscriptions`,
-      icon: Zap,
-      trend: subscriptions.length > 0 ? "subscriptions active" : "no subscriptions yet"
+      icon: Zap
     },
     {
       title: "Next Renewal",
       value: nextRenewal ? formatDate(nextRenewal.nextRenewal) : "None",
       description: nextRenewal ? nextRenewal.name : "Add subscriptions to track renewals",
-      icon: Calendar,
-      trend: nextRenewal ? "coming up" : ""
+      icon: Calendar
     }
-    // Removed Savings Potential block
   ];
 
   return (
@@ -111,11 +107,6 @@ const DashboardStats = () => {
             <p className="text-xs text-muted-foreground mt-1">
               {stat.description}
             </p>
-            {stat.trend && (
-              <p className="text-xs text-subscription-purple mt-1">
-                {stat.trend}
-              </p>
-            )}
           </CardContent>
         </Card>
       ))}
