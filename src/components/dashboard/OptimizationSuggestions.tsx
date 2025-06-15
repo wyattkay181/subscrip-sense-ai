@@ -132,31 +132,31 @@ const OptimizationSuggestions = () => {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-lg font-medium">Optimization Suggestions</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {suggestions.map((suggestion, index) => (
-          <Card key={index} className="flex flex-col">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                {suggestion.title}
-              </CardTitle>
-              <suggestion.icon className="h-4 w-4 text-subscription-purple" />
-            </CardHeader>
-            <CardContent className="flex-1">
-              <p className="text-sm text-muted-foreground mb-3">{suggestion.description}</p>
-              <div className="flex items-center gap-2">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  suggestion.impact === 'High' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
-                }`}>
-                  {suggestion.impact} Impact
-                </span>
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-lg font-medium">Optimization Suggestions</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {suggestions.map((suggestion, index) => (
+            <div key={index} className="flex items-start gap-3 p-3 rounded-lg border">
+              <suggestion.icon className="h-5 w-5 text-subscription-purple mt-0.5" />
+              <div className="flex-1">
+                <h4 className="font-medium text-sm">{suggestion.title}</h4>
+                <p className="text-sm text-muted-foreground mt-1">{suggestion.description}</p>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    suggestion.impact === 'High' ? 'bg-red-50 text-red-700' : 'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    {suggestion.impact} Impact
+                  </span>
+                </div>
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
