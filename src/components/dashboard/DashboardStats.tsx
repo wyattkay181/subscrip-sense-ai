@@ -93,14 +93,8 @@ const DashboardStats = () => {
       description: nextRenewal ? nextRenewal.name : "Add subscriptions to track renewals",
       icon: Calendar,
       trend: nextRenewal ? "coming up" : ""
-    },
-    {
-      title: "Savings Potential", 
-      value: subscriptions.length > 0 ? "Available" : "N/A",
-      description: subscriptions.length > 0 ? "Ask AI for suggestions" : "Add subscriptions first",
-      icon: TrendingUp,
-      trend: subscriptions.length > 0 ? "optimization ready" : ""
     }
+    // Removed Savings Potential block
   ];
 
   return (
@@ -131,3 +125,4 @@ const DashboardStats = () => {
 };
 
 export default DashboardStats;
+
