@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, Calendar, TrendingUp, Zap } from 'lucide-react';
+import { DollarSign, Calendar, Zap } from 'lucide-react';
 
 interface Subscription {
   id: string;
@@ -9,7 +10,6 @@ interface Subscription {
   price: number;
   billingCycle: string;
   nextRenewal: string;
-  status: string;
 }
 
 const DashboardStats = () => {
@@ -55,7 +55,7 @@ const DashboardStats = () => {
 
   const totalMonthly = subscriptions.reduce((sum, sub) => sum + sub.price, 0);
   const totalYearly = totalMonthly * 12;
-  const activeSubscriptions = subscriptions.filter(sub => sub.status === 'active').length;
+  const totalSubscriptions = subscriptions.length;
   
   // Get next renewal
   const nextRenewal = subscriptions.length > 0 
@@ -79,9 +79,9 @@ const DashboardStats = () => {
       icon: DollarSign
     },
     {
-      title: "Active Services",
-      value: activeSubscriptions.toString(),
-      description: `${subscriptions.length} total subscriptions`,
+      title: "Total Services",
+      value: totalSubscriptions.toString(),
+      description: `${totalSubscriptions} subscriptions`,
       icon: Zap
     },
     {

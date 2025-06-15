@@ -10,7 +10,6 @@ interface Subscription {
   price: number;
   billingCycle: string;
   nextRenewal: string;
-  status: string;
 }
 
 const OptimizationSuggestions = () => {

@@ -17,7 +17,6 @@ interface Subscription {
   price: number;
   billingCycle: string;
   nextRenewal: string;
-  status: string;
 }
 
 const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
@@ -26,8 +25,7 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
     category: '',
     price: '',
     billingCycle: 'Monthly',
-    nextRenewal: '',
-    status: 'active'
+    nextRenewal: ''
   });
 
   const handleInputChange = (field: string, value: string) => {
@@ -50,8 +48,7 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
       category: formData.category,
       price: parseFloat(formData.price),
       billingCycle: formData.billingCycle,
-      nextRenewal: formData.nextRenewal,
-      status: formData.status
+      nextRenewal: formData.nextRenewal
     };
 
     // Get existing subscriptions from localStorage
@@ -70,8 +67,7 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
       category: '',
       price: '',
       billingCycle: 'Monthly',
-      nextRenewal: '',
-      status: 'active'
+      nextRenewal: ''
     });
 
     onSuccess?.();
@@ -157,20 +153,6 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
               onChange={(e) => handleInputChange('nextRenewal', e.target.value)}
               required
             />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="status">Status</Label>
-            <Select value={formData.status} onValueChange={(value) => handleInputChange('status', value)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="trial-ending">Trial Ending</SelectItem>
-                <SelectItem value="renewal-soon">Renewal Soon</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
 
           <Button type="submit" className="w-full">

@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Calendar, ArrowDownUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -14,7 +13,6 @@ interface Subscription {
   price: number;
   billingCycle: string;
   nextRenewal: string;
-  status: string;
 }
 
 const SpendingTrend = () => {

@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
@@ -14,7 +13,6 @@ interface Subscription {
   price: number;
   billingCycle: string;
   nextRenewal: string;
-  status: string;
 }
 
 type SortKey = 'name' | 'category' | 'price' | 'nextRenewal';
@@ -91,17 +89,6 @@ const SubscriptionList = () => {
     }).format(date);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'trial-ending':
-        return <Badge className="bg-subscription-yellow">Trial Ending</Badge>;
-      case 'renewal-soon':
-        return <Badge className="bg-subscription-blue">Renews Soon</Badge>;
-      default:
-        return <Badge className="bg-subscription-green">Active</Badge>;
-    }
-  };
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -164,7 +151,6 @@ const SubscriptionList = () => {
                       <SortIndicator currentKey="nextRenewal" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-right">Status</TableHead>
                   <TableHead className="text-right w-20">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -175,9 +161,6 @@ const SubscriptionList = () => {
                     <TableCell>{subscription.category}</TableCell>
                     <TableCell className="text-right">${subscription.price.toFixed(2)}</TableCell>
                     <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
-                    <TableCell className="text-right">
-                      {getStatusBadge(subscription.status)}
-                    </TableCell>
                     <TableCell className="text-right">
                       <Button
                         variant="ghost"
