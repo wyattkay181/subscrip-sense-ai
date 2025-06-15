@@ -17,8 +17,11 @@ const OptimizationSuggestions = () => {
 
   useEffect(() => {
     const savedSubscriptions = localStorage.getItem('subscriptions');
+    console.log('OptimizationSuggestions: Raw localStorage data:', savedSubscriptions);
     if (savedSubscriptions) {
-      setSubscriptions(JSON.parse(savedSubscriptions));
+      const parsed = JSON.parse(savedSubscriptions);
+      console.log('OptimizationSuggestions: Parsed subscriptions:', parsed);
+      setSubscriptions(parsed);
     }
   }, []);
 
@@ -26,8 +29,11 @@ const OptimizationSuggestions = () => {
   useEffect(() => {
     const handleSubscriptionUpdate = () => {
       const savedSubscriptions = localStorage.getItem('subscriptions');
+      console.log('OptimizationSuggestions: Updated localStorage data:', savedSubscriptions);
       if (savedSubscriptions) {
-        setSubscriptions(JSON.parse(savedSubscriptions));
+        const parsed = JSON.parse(savedSubscriptions);
+        console.log('OptimizationSuggestions: Updated parsed subscriptions:', parsed);
+        setSubscriptions(parsed);
       } else {
         setSubscriptions([]);
       }
@@ -44,17 +50,22 @@ const OptimizationSuggestions = () => {
 
   // Generate suggestions based on actual subscriptions
   const generateSuggestions = () => {
+    console.log('OptimizationSuggestions: Generating suggestions for subscriptions:', subscriptions);
+    
     if (subscriptions.length === 0) {
+      console.log('OptimizationSuggestions: No subscriptions found');
       return [];
     }
 
     const suggestions = [];
     const totalMonthly = subscriptions.reduce((sum, sub) => sum + sub.price, 0);
+    console.log('OptimizationSuggestions: Total monthly spending:', totalMonthly);
 
     // Find most expensive subscription
     const mostExpensive = subscriptions.reduce((max, sub) => 
       sub.price > max.price ? sub : max
     );
+    console.log('OptimizationSuggestions: Most expensive subscription:', mostExpensive);
 
     // Find duplicate categories
     const categories = subscriptions.reduce((acc, sub) => {
@@ -65,9 +76,13 @@ const OptimizationSuggestions = () => {
     const duplicateCategories = Object.entries(categories)
       .filter(([_, count]) => count > 1)
       .map(([category]) => category);
+    
+    console.log('OptimizationSuggestions: Categories:', categories);
+    console.log('OptimizationSuggestions: Duplicate categories:', duplicateCategories);
 
     // Generate relevant suggestions
     if (mostExpensive.price > 20) {
+      console.log('OptimizationSuggestions: Adding expensive subscription suggestion');
       suggestions.push({
         icon: DollarSign,
         title: `Review ${mostExpensive.name}`,
@@ -77,6 +92,7 @@ const OptimizationSuggestions = () => {
     }
 
     if (duplicateCategories.length > 0) {
+      console.log('OptimizationSuggestions: Adding duplicate category suggestion');
       suggestions.push({
         icon: TrendingDown,
         title: `Consolidate ${duplicateCategories[0]} services`,
@@ -86,6 +102,7 @@ const OptimizationSuggestions = () => {
     }
 
     if (totalMonthly > 50) {
+      console.log('OptimizationSuggestions: Adding annual billing suggestion');
       suggestions.push({
         icon: Zap,
         title: "Annual billing discounts",
@@ -94,10 +111,14 @@ const OptimizationSuggestions = () => {
       });
     }
 
+    console.log('OptimizationSuggestions: Generated suggestions:', suggestions);
     return suggestions;
   };
 
   const suggestions = generateSuggestions();
+
+  console.log('OptimizationSuggestions: Final suggestions to render:', suggestions);
+  console.log('OptimizationSuggestions: Subscriptions length:', subscriptions.length);
 
   if (subscriptions.length === 0) {
     return (
