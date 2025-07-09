@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, Trash2 } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Download, Upload } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface Subscription {
   id: string;
@@ -23,6 +24,7 @@ const SubscriptionList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('nextRenewal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const { toast } = useToast();
 
   // Load subscriptions from localStorage on component mount
   useEffect(() => {
@@ -89,6 +91,94 @@ const SubscriptionList = () => {
     }).format(date);
   };
 
+  const exportToCSV = () => {
+    if (subscriptions.length === 0) {
+      toast({
+        title: "No data to export",
+        description: "Add some subscriptions first before exporting.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const headers = ['Name', 'Category', 'Price', 'Billing Cycle', 'Next Renewal'];
+    const csvContent = [
+      headers.join(','),
+      ...subscriptions.map(sub => [
+        `"${sub.name}"`,
+        `"${sub.category}"`,
+        sub.price.toString(),
+        `"${sub.billingCycle}"`,
+        `"${sub.nextRenewal}"`
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `subscriptions-${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export successful",
+      description: `Exported ${subscriptions.length} subscriptions to CSV.`
+    });
+  };
+
+  const importFromCSV = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const csv = e.target?.result as string;
+        const lines = csv.split('\n');
+        
+        // Skip header row and filter out empty lines
+        const dataLines = lines.slice(1).filter(line => line.trim());
+        
+        const importedSubscriptions: Subscription[] = dataLines.map((line, index) => {
+          const columns = line.split(',').map(col => col.replace(/^"|"$/g, '').trim());
+          
+          if (columns.length < 5) {
+            throw new Error(`Invalid CSV format at row ${index + 2}`);
+          }
+
+          return {
+            id: `imported-${Date.now()}-${index}`,
+            name: columns[0],
+            category: columns[1],
+            price: parseFloat(columns[2]) || 0,
+            billingCycle: columns[3],
+            nextRenewal: columns[4]
+          };
+        });
+
+        setSubscriptions(prev => [...prev, ...importedSubscriptions]);
+        
+        toast({
+          title: "Import successful",
+          description: `Imported ${importedSubscriptions.length} subscriptions from CSV.`
+        });
+      } catch (error) {
+        toast({
+          title: "Import failed",
+          description: `Error reading CSV file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          variant: "destructive"
+        });
+      }
+    };
+    
+    reader.readAsText(file);
+    // Clear the input so the same file can be selected again
+    event.target.value = '';
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -101,6 +191,37 @@ const SubscriptionList = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="h-9 md:w-[300px]"
             />
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={exportToCSV}
+                className="h-9"
+              >
+                <Download size={16} className="mr-2" />
+                Export
+              </Button>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={importFromCSV}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  id="csv-upload"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9"
+                  asChild
+                >
+                  <label htmlFor="csv-upload" className="cursor-pointer">
+                    <Upload size={16} className="mr-2" />
+                    Import
+                  </label>
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </CardHeader>
