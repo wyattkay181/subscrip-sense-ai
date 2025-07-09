@@ -179,6 +179,14 @@ const SubscriptionList = () => {
     event.target.value = '';
   };
 
+  const calculateMonthlyCost = (price: number, billingCycle: string) => {
+    return billingCycle === 'Yearly' ? price / 12 : price;
+  };
+
+  const calculateYearlyCost = (price: number, billingCycle: string) => {
+    return billingCycle === 'Monthly' ? price * 12 : price;
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -254,15 +262,18 @@ const SubscriptionList = () => {
                       <SortIndicator currentKey="category" />
                     </div>
                   </TableHead>
-                  <TableHead 
-                    className="cursor-pointer hover:text-primary transition-colors text-right"
-                    onClick={() => handleSort('price')}
-                  >
-                    <div className="flex items-center justify-end">
-                      Monthly Price
-                      <SortIndicator currentKey="price" />
-                    </div>
-                  </TableHead>
+                   <TableHead 
+                     className="cursor-pointer hover:text-primary transition-colors text-right"
+                     onClick={() => handleSort('price')}
+                   >
+                     <div className="flex items-center justify-end">
+                       Monthly Cost
+                       <SortIndicator currentKey="price" />
+                     </div>
+                   </TableHead>
+                   <TableHead className="text-right">
+                     Yearly Cost
+                   </TableHead>
                   <TableHead 
                     className="cursor-pointer hover:text-primary transition-colors text-right"
                     onClick={() => handleSort('nextRenewal')}
@@ -278,9 +289,14 @@ const SubscriptionList = () => {
               <TableBody>
                 {sortedAndFilteredSubscriptions.map((subscription) => (
                   <TableRow key={subscription.id}>
-                    <TableCell className="font-medium">{subscription.name}</TableCell>
-                    <TableCell>{subscription.category}</TableCell>
-                    <TableCell className="text-right">${subscription.price.toFixed(2)}</TableCell>
+                     <TableCell className="font-medium">{subscription.name}</TableCell>
+                     <TableCell>{subscription.category}</TableCell>
+                     <TableCell className="text-right">
+                       ${calculateMonthlyCost(subscription.price, subscription.billingCycle).toFixed(2)}
+                     </TableCell>
+                     <TableCell className="text-right">
+                       ${calculateYearlyCost(subscription.price, subscription.billingCycle).toFixed(2)}
+                     </TableCell>
                     <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
                     <TableCell className="text-right">
                       <Button

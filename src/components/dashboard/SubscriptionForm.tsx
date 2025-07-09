@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from '@/hooks/use-toast';
 
 interface SubscriptionFormProps {
   onSuccess?: () => void;
@@ -20,6 +21,7 @@ interface Subscription {
 }
 
 const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
+  const { toast } = useToast();
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -70,6 +72,11 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
       nextRenewal: ''
     });
 
+    toast({
+      title: "Subscription added",
+      description: `${formData.name} has been added to your subscriptions.`
+    });
+
     onSuccess?.();
   };
 
@@ -117,7 +124,9 @@ const SubscriptionForm = ({ onSuccess }: SubscriptionFormProps) => {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Monthly Price</Label>
+              <Label htmlFor="price">
+                {formData.billingCycle === 'Yearly' ? 'Yearly Price' : 'Monthly Price'}
+              </Label>
               <Input
                 id="price"
                 type="number"
