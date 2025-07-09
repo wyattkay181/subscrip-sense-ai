@@ -4,8 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowUp, ArrowDown, Trash2, Download, Upload } from 'lucide-react';
+import { ArrowUp, ArrowDown, Trash2, Download, Upload, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface Subscription {
   id: string;
@@ -24,6 +27,8 @@ const SubscriptionList = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('nextRenewal');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  const [editingSubscription, setEditingSubscription] = useState<Subscription | null>(null);
+  const [editFormData, setEditFormData] = useState<Subscription | null>(null);
   const { toast } = useToast();
 
   // Load subscriptions from localStorage on component mount
@@ -41,6 +46,38 @@ const SubscriptionList = () => {
 
   const handleDelete = (id: string) => {
     setSubscriptions(prev => prev.filter(sub => sub.id !== id));
+  };
+
+  const handleEdit = (subscription: Subscription) => {
+    setEditingSubscription(subscription);
+    setEditFormData({ ...subscription });
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editFormData) return;
+
+    setSubscriptions(prev => 
+      prev.map(sub => 
+        sub.id === editFormData.id ? editFormData : sub
+      )
+    );
+
+    setEditingSubscription(null);
+    setEditFormData(null);
+    
+    toast({
+      title: "Subscription updated",
+      description: `${editFormData.name} has been updated successfully.`
+    });
+  };
+
+  const handleEditInputChange = (field: keyof Subscription, value: string | number) => {
+    if (!editFormData) return;
+    setEditFormData(prev => prev ? {
+      ...prev,
+      [field]: value
+    } : null);
   };
 
   const handleSort = (key: SortKey) => {
@@ -283,7 +320,7 @@ const SubscriptionList = () => {
                       <SortIndicator currentKey="nextRenewal" />
                     </div>
                   </TableHead>
-                  <TableHead className="text-right w-20">Actions</TableHead>
+                  <TableHead className="text-right w-32">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -297,17 +334,27 @@ const SubscriptionList = () => {
                      <TableCell className="text-right">
                        ${calculateYearlyCost(subscription.price, subscription.billingCycle).toFixed(2)}
                      </TableCell>
-                    <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDelete(subscription.id)}
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </TableCell>
+                     <TableCell className="text-right">{formatDate(subscription.nextRenewal)}</TableCell>
+                     <TableCell className="text-right">
+                       <div className="flex gap-1 justify-end">
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleEdit(subscription)}
+                           className="text-muted-foreground hover:text-primary"
+                         >
+                           <Edit size={16} />
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="sm"
+                           onClick={() => handleDelete(subscription.id)}
+                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                         >
+                           <Trash2 size={16} />
+                         </Button>
+                       </div>
+                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -315,6 +362,113 @@ const SubscriptionList = () => {
           </div>
         )}
       </CardContent>
+
+      {/* Edit Dialog */}
+      <Dialog open={editingSubscription !== null} onOpenChange={(open) => {
+        if (!open) {
+          setEditingSubscription(null);
+          setEditFormData(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Edit Subscription</DialogTitle>
+          </DialogHeader>
+          {editFormData && (
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Service Name</Label>
+                <Input
+                  id="edit-name"
+                  value={editFormData.name}
+                  onChange={(e) => handleEditInputChange('name', e.target.value)}
+                  placeholder="e.g. Netflix, Spotify"
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <Select 
+                  value={editFormData.category} 
+                  onValueChange={(value) => handleEditInputChange('category', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {['Streaming', 'Music', 'Productivity', 'Storage', 'Software', 'News', 'Gaming', 'Fitness', 'Education', 'Other'].map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-price">
+                    {editFormData.billingCycle === 'Yearly' ? 'Yearly Price' : 'Monthly Price'}
+                  </Label>
+                  <Input
+                    id="edit-price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={editFormData.price}
+                    onChange={(e) => handleEditInputChange('price', parseFloat(e.target.value) || 0)}
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-billingCycle">Billing Cycle</Label>
+                  <Select 
+                    value={editFormData.billingCycle} 
+                    onValueChange={(value) => handleEditInputChange('billingCycle', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Monthly">Monthly</SelectItem>
+                      <SelectItem value="Yearly">Yearly</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-nextRenewal">Next Renewal Date</Label>
+                <Input
+                  id="edit-nextRenewal"
+                  type="date"
+                  value={editFormData.nextRenewal}
+                  onChange={(e) => handleEditInputChange('nextRenewal', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => {
+                    setEditingSubscription(null);
+                    setEditFormData(null);
+                  }}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
